@@ -86,9 +86,6 @@ export default function LandingPage() {
             <a href="#testimonials" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Testimonials
             </a>
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
-            </a>
           </nav>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -258,119 +255,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-12">
-            <p className="text-primary font-medium text-sm uppercase tracking-wider mb-2">
-              Pricing
-            </p>
-            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-              Invest in Your Growth
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Flexible packages designed to meet you where you are on your journey.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="hover-elevate">
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">Discovery</h3>
-                <p className="text-3xl font-bold mb-4">
-                  $150<span className="text-sm font-normal text-muted-foreground">/session</span>
-                </p>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    60-minute session
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    Session notes
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    Email support
-                  </li>
-                </ul>
-                <Link href="/intake">
-                  <Button variant="outline" className="w-full" data-testid="button-discovery">
-                    Get Started
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-            <Card className="hover-elevate border-primary relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
-                  Most Popular
-                </span>
-              </div>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">Growth</h3>
-                <p className="text-3xl font-bold mb-4">
-                  $500<span className="text-sm font-normal text-muted-foreground">/month</span>
-                </p>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    4 sessions/month
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    Priority scheduling
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    Resource library access
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    Action item tracking
-                  </li>
-                </ul>
-                <Link href="/intake">
-                  <Button className="w-full" data-testid="button-growth">
-                    Get Started
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-            <Card className="hover-elevate">
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">Executive</h3>
-                <p className="text-3xl font-bold mb-4">
-                  $1,200<span className="text-sm font-normal text-muted-foreground">/month</span>
-                </p>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    8 sessions/month
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    Unlimited messaging
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    Custom resources
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    Emergency sessions
-                  </li>
-                </ul>
-                <Link href="/intake">
-                  <Button variant="outline" className="w-full" data-testid="button-executive">
-                    Get Started
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto max-w-4xl text-center">
@@ -401,14 +285,11 @@ export default function LandingPage() {
               © {new Date().getFullYear()} Holger Coaching. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Privacy
-              </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Terms
-              </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Contact
+              <Link href="/intake" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Get Started
+              </Link>
+              <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Features
               </a>
             </div>
           </div>

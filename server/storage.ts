@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, inArray } from "drizzle-orm";
 import {
   users,
   clientProfiles,
@@ -11,6 +11,9 @@ import {
   messages,
   testimonials,
   coachSettings,
+  payments,
+  invoices,
+  userOAuthTokens,
   type User,
   type ClientProfile,
   type InsertClientProfile,
@@ -114,6 +117,43 @@ export class DatabaseStorage implements IStorage {
 
   async getAllClientProfiles(): Promise<ClientProfile[]> {
     return db.select().from(clientProfiles).orderBy(desc(clientProfiles.createdAt));
+  }
+
+  async getAllClientProfilesWithUsers() {
+    const results = await db
+      .select({
+        profile: clientProfiles,
+        user: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
+      .from(clientProfiles)
+      .leftJoin(users, eq(clientProfiles.userId, users.id))
+      .orderBy(desc(clientProfiles.createdAt));
+    
+    return results.map(r => ({ ...r.profile, user: r.user }));
+  }
+
+  async getClientProfileByIdWithUser(id: string) {
+    const [result] = await db
+      .select({
+        profile: clientProfiles,
+        user: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
+      .from(clientProfiles)
+      .leftJoin(users, eq(clientProfiles.userId, users.id))
+      .where(eq(clientProfiles.id, id));
+    
+    if (!result) return undefined;
+    return { ...result.profile, user: result.user };
   }
 
   // Intake Forms
@@ -291,6 +331,47 @@ export class DatabaseStorage implements IStorage {
   async createMessage(message: InsertMessage): Promise<Message> {
     const [created] = await db.insert(messages).values(message).returning();
     return created;
+  }
+
+  // Data Deletion (GDPR compliance)
+  async deleteAllClientData(userId: string, clientProfileId: string): Promise<void> {
+    // Get all session IDs for this client to delete related messages
+    const clientSessions = await db.select({ id: coachingSessions.id })
+      .from(coachingSessions)
+      .where(eq(coachingSessions.clientId, clientProfileId));
+    const sessionIds = clientSessions.map(s => s.id);
+
+    // Delete in order (respecting foreign key constraints):
+    // 1. Messages (via sessions)
+    if (sessionIds.length > 0) {
+      await db.delete(messages).where(inArray(messages.sessionId, sessionIds));
+    }
+
+    // 2. Action items
+    await db.delete(actionItems).where(eq(actionItems.clientId, clientProfileId));
+
+    // 3. Resources (note: files in GCS would need separate cleanup)
+    await db.delete(resources).where(eq(resources.clientId, clientProfileId));
+
+    // 4. Sessions
+    await db.delete(coachingSessions).where(eq(coachingSessions.clientId, clientProfileId));
+
+    // 5. Payments
+    await db.delete(payments).where(eq(payments.clientId, clientProfileId));
+
+    // 6. Invoices
+    await db.delete(invoices).where(eq(invoices.clientId, clientProfileId));
+
+    // 7. Notifications
+    await db.delete(notifications).where(eq(notifications.userId, userId));
+
+    // 8. OAuth tokens
+    await db.delete(userOAuthTokens).where(eq(userOAuthTokens.userId, userId));
+
+    // 9. Client profile
+    await db.delete(clientProfiles).where(eq(clientProfiles.id, clientProfileId));
+
+    // 10. User account (handled by authStorage.deleteUser)
   }
 }
 

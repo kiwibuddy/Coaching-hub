@@ -163,19 +163,25 @@ export default function ClientProfile() {
   });
 
   const requestDeletion = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/client/request-deletion", {});
+    mutationFn: async (): Promise<{ success: boolean; message: string; redirectTo: string }> => {
+      const response = await apiRequest("POST", "/api/client/request-deletion", {});
+      return response as { success: boolean; message: string; redirectTo: string };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Deletion Request Submitted",
-        description: "Your account deletion request has been submitted. We'll process it within 30 days.",
+        title: "Account Deleted",
+        description: data.message || "Your account and all data have been permanently deleted.",
       });
+      // Clear query cache and redirect to home
+      queryClient.clear();
+      setTimeout(() => {
+        window.location.href = data.redirectTo || "/";
+      }, 1500);
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to submit deletion request. Please try again.",
+        description: "Failed to delete account. Please try again or contact support.",
         variant: "destructive",
       });
     },

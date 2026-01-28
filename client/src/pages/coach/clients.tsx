@@ -23,14 +23,24 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { TableSkeleton } from "@/components/loading-skeleton";
 import type { ClientProfile } from "@shared/schema";
-import { Users, Search, ArrowRight, Calendar, Target } from "lucide-react";
+import { Users, Search, ArrowRight } from "lucide-react";
 import { useState } from "react";
+
+// Extended type with user data from the API
+type ClientProfileWithUser = ClientProfile & {
+  user?: {
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+};
 
 export default function CoachClients() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const { data: clients, isLoading } = useQuery<ClientProfile[]>({
+  const { data: clients, isLoading } = useQuery<ClientProfileWithUser[]>({
     queryKey: ["/api/coach/clients"],
   });
 
@@ -42,8 +52,23 @@ export default function CoachClients() {
     );
   }
 
+  // Helper to get display name for a client
+  const getClientName = (client: ClientProfileWithUser) => {
+    if (client.user?.firstName && client.user?.lastName) {
+      return `${client.user.firstName} ${client.user.lastName}`;
+    }
+    if (client.user?.email) {
+      return client.user.email;
+    }
+    return `Client #${client.id.slice(0, 8)}`;
+  };
+
   const filteredClients = clients?.filter((client) => {
-    const matchesSearch = client.goals?.toLowerCase().includes(search.toLowerCase()) ||
+    const clientName = getClientName(client).toLowerCase();
+    const matchesSearch = 
+      clientName.includes(search.toLowerCase()) ||
+      client.goals?.toLowerCase().includes(search.toLowerCase()) ||
+      client.user?.email?.toLowerCase().includes(search.toLowerCase()) ||
       client.id.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = filterStatus === "all" || client.status === filterStatus;
     return matchesSearch && matchesStatus;
@@ -116,9 +141,9 @@ export default function CoachClients() {
                         <Users className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">Client #{client.id.slice(0, 8)}</p>
+                        <p className="font-medium">{getClientName(client)}</p>
                         <p className="text-sm text-muted-foreground">
-                          {client.preferredContactMethod || "Email"}
+                          {client.user?.email || client.preferredContactMethod || "No email"}
                         </p>
                       </div>
                     </div>

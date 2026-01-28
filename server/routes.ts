@@ -494,8 +494,41 @@ export async function registerRoutes(
   });
 
   app.post("/api/client/request-deletion", requireClient, async (req, res) => {
-    // In production, this would trigger a deletion workflow
-    res.json({ message: "Deletion request submitted" });
+    try {
+      const userId = req.user!.id;
+      
+      // Get client profile
+      const profile = await storage.getClientProfile(userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Client profile not found" });
+      }
+
+      // Delete all client data (sessions, messages, actions, resources, etc.)
+      await storage.deleteAllClientData(userId, profile.id);
+
+      // Delete user account
+      await authStorage.deleteUser(userId);
+
+      // Destroy session and log out
+      req.logout((err) => {
+        if (err) {
+          console.error("Logout error during deletion:", err);
+        }
+        req.session.destroy((sessionErr) => {
+          if (sessionErr) {
+            console.error("Session destroy error:", sessionErr);
+          }
+          res.json({ 
+            success: true, 
+            message: "Your account and all associated data have been permanently deleted.",
+            redirectTo: "/"
+          });
+        });
+      });
+    } catch (error) {
+      console.error("Data deletion error:", error);
+      res.status(500).json({ error: "Failed to delete account data" });
+    }
   });
 
   // ============================================================
@@ -503,7 +536,7 @@ export async function registerRoutes(
   // ============================================================
   app.get("/api/coach/clients", requireCoach, async (req, res) => {
     try {
-      const clients = await storage.getAllClientProfiles();
+      const clients = await storage.getAllClientProfilesWithUsers();
       res.json(clients);
     } catch (error) {
       res.status(500).json({ error: "Failed to get clients" });
@@ -512,7 +545,7 @@ export async function registerRoutes(
 
   app.get("/api/coach/clients/:id", requireCoach, async (req, res) => {
     try {
-      const client = await storage.getClientProfileById(paramId(req.params.id));
+      const client = await storage.getClientProfileByIdWithUser(paramId(req.params.id));
       if (!client) {
         return res.status(404).json({ error: "Client not found" });
       }
@@ -546,8 +579,31 @@ export async function registerRoutes(
       
       const intake = await storage.updateIntakeForm(paramId(req.params.id), data);
       
-      // Send welcome email when intake is accepted
+      // When intake is accepted, create user account and client profile
       if (data.status === "accepted" && existingIntake.email) {
+        // Check if user already exists with this email
+        const existingUser = await authStorage.getUserByEmail(existingIntake.email);
+        
+        if (!existingUser) {
+          // Create user account (no password - will use Google sign-in)
+          const newUser = await authStorage.upsertUser({
+            email: existingIntake.email,
+            username: existingIntake.email,
+            firstName: existingIntake.firstName,
+            lastName: existingIntake.lastName,
+            role: "client",
+          });
+
+          // Create client profile
+          await storage.createClientProfile({
+            userId: newUser.id,
+            phone: existingIntake.phone || null,
+            goals: existingIntake.goals,
+            status: "active",
+          });
+        }
+        
+        // Send welcome email with Google sign-in instructions
         await sendEmail(accountCreatedEmail(
           existingIntake.email,
           `${existingIntake.firstName} ${existingIntake.lastName}`
@@ -559,6 +615,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: error.errors });
       } else {
+        console.error("Failed to update intake:", error);
         res.status(500).json({ error: "Failed to update intake" });
       }
     }

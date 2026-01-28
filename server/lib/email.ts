@@ -82,7 +82,7 @@ export function intakeSubmittedEmail(coachEmail: string, intakeData: {
 export function accountCreatedEmail(clientEmail: string, clientName: string): EmailOptions {
   return {
     to: clientEmail,
-    subject: "Welcome to Holger Coaching Portal",
+    subject: "Welcome to Holger Coaching Portal - Your Account is Ready!",
     html: `
       <!DOCTYPE html>
       <html>
@@ -94,6 +94,9 @@ export function accountCreatedEmail(clientEmail: string, clientName: string): Em
             .header { background-color: #3A5A6D; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
             .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
             .button { display: inline-block; padding: 12px 24px; background-color: #3A5A6D; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .email-box { background-color: #e8f4f8; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 14px; margin: 10px 0; }
+            .step { display: flex; align-items: flex-start; margin: 10px 0; }
+            .step-number { background-color: #3A5A6D; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 12px; flex-shrink: 0; }
           </style>
         </head>
         <body>
@@ -103,16 +106,37 @@ export function accountCreatedEmail(clientEmail: string, clientName: string): Em
             </div>
             <div class="content">
               <p>Hi ${clientName},</p>
-              <p>Great news! Your coaching application has been accepted. You now have access to your personal coaching portal.</p>
-              <p>You can:</p>
+              <p>Great news! Your coaching application has been accepted. Your account is now ready.</p>
+              
+              <h3>How to Access Your Portal:</h3>
+              <div class="step">
+                <span class="step-number">1</span>
+                <span>Click the button below to go to the portal</span>
+              </div>
+              <div class="step">
+                <span class="step-number">2</span>
+                <span>Click <strong>"Sign in with Google"</strong></span>
+              </div>
+              <div class="step">
+                <span class="step-number">3</span>
+                <span>Use your Google account with this email address:</span>
+              </div>
+              <div class="email-box">${clientEmail}</div>
+              
+              <p>Once signed in, you can:</p>
               <ul>
                 <li>View and manage your coaching sessions</li>
                 <li>Access resources and materials</li>
                 <li>Track your action items and progress</li>
                 <li>Communicate with your coach</li>
               </ul>
-              <p>Log in to get started on your coaching journey!</p>
+              
               <a href="${process.env.APP_URL || "https://your-app-url.com"}" class="button">Access Your Portal</a>
+              
+              <p style="margin-top: 20px; font-size: 13px; color: #666;">
+                <strong>Note:</strong> Make sure to sign in with your Google account that uses ${clientEmail}. 
+                If you don't have a Google account with this email, please contact your coach.
+              </p>
             </div>
           </div>
         </body>

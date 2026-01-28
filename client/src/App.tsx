@@ -28,6 +28,7 @@ import ClientBilling from "@/pages/client/billing";
 // Coach pages
 import CoachDashboard from "@/pages/coach/dashboard";
 import CoachClients from "@/pages/coach/clients";
+import CoachClientDetail from "@/pages/coach/client-detail";
 import CoachSessions from "@/pages/coach/sessions";
 import CoachIntake from "@/pages/coach/intake";
 import CoachResources from "@/pages/coach/resources";
@@ -208,6 +209,13 @@ function Router() {
         <ProtectedRoute role="coach">
           <CoachLayout>
             <CoachClients />
+          </CoachLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/coach/clients/:id">
+        <ProtectedRoute role="coach">
+          <CoachLayout>
+            <CoachClientDetail />
           </CoachLayout>
         </ProtectedRoute>
       </Route>
