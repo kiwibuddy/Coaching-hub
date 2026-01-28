@@ -279,3 +279,213 @@ export function resourceUploadedEmail(
     `,
   };
 }
+
+export function actionItemAssignedEmail(
+  clientEmail: string,
+  clientName: string,
+  actionData: {
+    title: string;
+    description?: string;
+    dueDate?: string;
+  }
+): EmailOptions {
+  return {
+    to: clientEmail,
+    subject: `New Action Item: ${actionData.title}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #3A5A6D; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+            .action-info { background-color: white; padding: 15px; border-radius: 6px; margin: 15px 0; }
+            .info-row { margin: 8px 0; }
+            .label { font-weight: bold; color: #3A5A6D; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #3A5A6D; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>New Action Item Assigned</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${clientName},</p>
+              <p>Your coach has assigned you a new action item:</p>
+              <div class="action-info">
+                <div class="info-row"><span class="label">Task:</span> ${actionData.title}</div>
+                ${actionData.description ? `<div class="info-row"><span class="label">Details:</span> ${actionData.description}</div>` : ""}
+                ${actionData.dueDate ? `<div class="info-row"><span class="label">Due Date:</span> ${new Date(actionData.dueDate).toLocaleDateString()}</div>` : ""}
+              </div>
+              <p>Please review and complete this action item.</p>
+              <a href="${process.env.APP_URL || "https://your-app-url.com"}/client/actions" class="button">View Action Items</a>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  };
+}
+
+export function actionItemDueEmail(
+  clientEmail: string,
+  clientName: string,
+  actionData: {
+    title: string;
+    dueDate: string;
+  }
+): EmailOptions {
+  return {
+    to: clientEmail,
+    subject: `Action Item Due Tomorrow: ${actionData.title}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #D97706; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+            .action-info { background-color: white; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #D97706; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #D97706; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Action Item Due Tomorrow</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${clientName},</p>
+              <p>This is a reminder that the following action item is due tomorrow:</p>
+              <div class="action-info">
+                <strong>${actionData.title}</strong>
+                <p>Due: ${new Date(actionData.dueDate).toLocaleDateString()}</p>
+              </div>
+              <p>Please ensure you complete this action item on time.</p>
+              <a href="${process.env.APP_URL || "https://your-app-url.com"}/client/actions" class="button">View Action Items</a>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  };
+}
+
+export function sessionCancelledEmail(
+  recipientEmail: string,
+  recipientName: string,
+  sessionData: {
+    title: string;
+    scheduledAt: string;
+    cancelledBy: string;
+  }
+): EmailOptions {
+  return {
+    to: recipientEmail,
+    subject: `Session Cancelled: ${sessionData.title}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #DC2626; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+            .session-info { background-color: white; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #DC2626; }
+            .info-row { margin: 8px 0; }
+            .label { font-weight: bold; color: #DC2626; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #3A5A6D; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Session Cancelled</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${recipientName},</p>
+              <p>The following coaching session has been cancelled:</p>
+              <div class="session-info">
+                <div class="info-row"><span class="label">Title:</span> ${sessionData.title}</div>
+                <div class="info-row"><span class="label">Scheduled for:</span> ${new Date(sessionData.scheduledAt).toLocaleString()}</div>
+                <div class="info-row"><span class="label">Cancelled by:</span> ${sessionData.cancelledBy}</div>
+              </div>
+              <p>If you have any questions, please reach out to reschedule.</p>
+              <a href="${process.env.APP_URL || "https://your-app-url.com"}" class="button">View Dashboard</a>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  };
+}
+
+export function paymentReceivedEmail(
+  recipientEmail: string,
+  recipientName: string,
+  paymentData: {
+    amount: string;
+    description: string;
+    date: string;
+  },
+  isCoach: boolean = false
+): EmailOptions {
+  const subject = isCoach 
+    ? `Payment Received: ${paymentData.amount}` 
+    : `Payment Confirmation: ${paymentData.amount}`;
+  
+  const message = isCoach
+    ? "You've received a new payment from a client:"
+    : "Thank you for your payment. Here are your payment details:";
+
+  return {
+    to: recipientEmail,
+    subject,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #059669; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+            .payment-info { background-color: white; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #059669; }
+            .amount { font-size: 24px; font-weight: bold; color: #059669; }
+            .info-row { margin: 8px 0; }
+            .label { font-weight: bold; color: #3A5A6D; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #3A5A6D; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>${isCoach ? "Payment Received" : "Payment Confirmation"}</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${recipientName},</p>
+              <p>${message}</p>
+              <div class="payment-info">
+                <div class="amount">${paymentData.amount}</div>
+                <div class="info-row"><span class="label">Description:</span> ${paymentData.description}</div>
+                <div class="info-row"><span class="label">Date:</span> ${paymentData.date}</div>
+              </div>
+              <p>${isCoach ? "The payment has been processed and will be deposited to your account." : "Thank you for your business!"}</p>
+              <a href="${process.env.APP_URL || "https://your-app-url.com"}/${isCoach ? "coach" : "client"}/billing" class="button">View Billing</a>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  };
+}

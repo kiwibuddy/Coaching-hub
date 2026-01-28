@@ -33,7 +33,10 @@ import {
   Calculator,
   LogOut,
   ChevronUp,
+  CreditCard,
+  BarChart3,
 } from "lucide-react";
+import { PWAInstallBanner } from "@/components/pwa-install-button";
 
 interface SidebarProps {
   role: "client" | "coach";
@@ -44,6 +47,7 @@ const clientNavItems = [
   { title: "Sessions", url: "/client/sessions", icon: Calendar },
   { title: "Resources", url: "/client/resources", icon: FileText },
   { title: "Action Items", url: "/client/actions", icon: Target },
+  { title: "Billing", url: "/client/billing", icon: CreditCard },
   { title: "Profile", url: "/client/profile", icon: User },
 ];
 
@@ -53,6 +57,8 @@ const coachNavItems = [
   { title: "Sessions", url: "/coach/sessions", icon: Calendar },
   { title: "Resources", url: "/coach/resources", icon: FileText },
   { title: "Intake Requests", url: "/coach/intake", icon: UserPlus },
+  { title: "Billing", url: "/coach/billing", icon: CreditCard },
+  { title: "Analytics", url: "/coach/analytics", icon: BarChart3 },
   { title: "Pricing Calculator", url: "/coach/calculator", icon: Calculator },
 ];
 
@@ -102,6 +108,8 @@ export function AppSidebar({ role }: SidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <PWAInstallBanner />
 
       <SidebarFooter className="p-2">
         <DropdownMenu>

@@ -19,7 +19,20 @@ import {
   ArrowRight,
   CalendarDays,
   ListTodo,
+  TrendingUp,
+  Award,
 } from "lucide-react";
+
+interface ClientProgressMetrics {
+  sessionsAttended: number;
+  totalSessions: number;
+  upcomingSessions: number;
+  actionItemsCompleted: number;
+  actionItemsTotal: number;
+  actionItemCompletionRate: number;
+  engagementScore: number;
+  reflectionsSubmitted: number;
+}
 
 export default function ClientDashboard() {
   const { user } = useAuth();
@@ -30,6 +43,10 @@ export default function ClientDashboard() {
 
   const { data: actionItems, isLoading: actionsLoading } = useQuery<ActionItem[]>({
     queryKey: ["/api/client/actions"],
+  });
+
+  const { data: progressMetrics } = useQuery<ClientProgressMetrics>({
+    queryKey: ["/api/client/analytics"],
   });
 
   const isLoading = sessionsLoading || actionsLoading;
@@ -64,7 +81,7 @@ export default function ClientDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Total Sessions"
           value={sessions?.length || 0}
@@ -87,6 +104,12 @@ export default function ClientDashboard() {
           value={nextSession ? format(new Date(nextSession.scheduledAt), "MMM d") : "None"}
           description={nextSession ? format(new Date(nextSession.scheduledAt), "h:mm a") : "Schedule one!"}
           icon={Clock}
+        />
+        <StatCard
+          title="Engagement Score"
+          value={progressMetrics?.engagementScore || 0}
+          description="Your coaching engagement"
+          icon={TrendingUp}
         />
       </div>
 

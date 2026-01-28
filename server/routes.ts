@@ -20,6 +20,40 @@ import {
   sessionReminderEmail,
   resourceUploadedEmail,
 } from "./lib/email";
+import {
+  createStripeCheckoutSession,
+  handleStripeWebhook,
+  createPayPalOrder,
+  capturePayPalOrder,
+  getPaymentsByClient,
+  getAllPayments,
+  getInvoicesByClient,
+  getAllInvoices,
+  getInvoice,
+  createInvoice,
+  updateInvoice,
+  isStripeEnabled,
+  isPayPalEnabled,
+} from "./lib/payments";
+import {
+  isCalendarEnabled,
+  getCalendarAuthUrl,
+  exchangeCalendarCode,
+  saveCalendarTokens,
+  hasCalendarConnected,
+  disconnectCalendar,
+  createCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
+} from "./lib/calendar";
+import {
+  getCoachOverviewMetrics,
+  getMonthlyRevenue,
+  getSessionsTrend,
+  getClientProgressMetrics,
+  getClientActivityTrend,
+  getClientMetrics,
+} from "./lib/analytics";
 
 // Extend Request type to include user with role
 declare global {
@@ -1031,6 +1065,449 @@ export async function registerRoutes(
   // ============================================================
   // Upload routes are handled by registerObjectStorageRoutes in server/index.ts
   // Routes: /api/uploads/request-url and /objects/:objectPath(*)
+
+  // ============================================================
+  // PAYMENT ROUTES
+  // ============================================================
+  
+  // Get payment providers status
+  app.get("/api/payments/providers", requireAuth, (req, res) => {
+    res.json({
+      stripe: isStripeEnabled(),
+      paypal: isPayPalEnabled(),
+    });
+  });
+
+  // Create Stripe checkout session
+  app.post("/api/payments/stripe/checkout", requireAuth, async (req, res) => {
+    try {
+      if (!isStripeEnabled()) {
+        return res.status(503).json({ error: "Stripe is not configured" });
+      }
+
+      const schema = z.object({
+        amount: z.number().min(100), // Minimum $1.00
+        description: z.string(),
+        sessionId: z.string().optional(),
+        invoiceId: z.string().optional(),
+      });
+      const data = schema.parse(req.body);
+
+      // Get client profile
+      const profile = await storage.getClientProfile(req.user!.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Client profile not found" });
+      }
+
+      const result = await createStripeCheckoutSession({
+        clientId: profile.id,
+        amount: data.amount,
+        description: data.description,
+        sessionId: data.sessionId,
+        invoiceId: data.invoiceId,
+        successUrl: `${process.env.APP_URL}/client/billing?success=true`,
+        cancelUrl: `${process.env.APP_URL}/client/billing?cancelled=true`,
+      });
+
+      if (!result) {
+        return res.status(500).json({ error: "Failed to create checkout session" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        console.error("Stripe checkout error:", error);
+        res.status(500).json({ error: "Failed to create checkout session" });
+      }
+    }
+  });
+
+  // Stripe webhook (no auth - verified by signature)
+  app.post("/api/webhooks/stripe", async (req, res) => {
+    const signature = req.headers["stripe-signature"] as string;
+    if (!signature) {
+      return res.status(400).json({ error: "Missing signature" });
+    }
+
+    const result = await handleStripeWebhook(req.rawBody as Buffer, signature);
+    if (result.success) {
+      res.json({ received: true, paymentId: result.paymentId });
+    } else {
+      res.status(400).json({ error: "Webhook processing failed" });
+    }
+  });
+
+  // Create PayPal order
+  app.post("/api/payments/paypal/create-order", requireAuth, async (req, res) => {
+    try {
+      if (!isPayPalEnabled()) {
+        return res.status(503).json({ error: "PayPal is not configured" });
+      }
+
+      const schema = z.object({
+        amount: z.number().min(100),
+        description: z.string(),
+        sessionId: z.string().optional(),
+        invoiceId: z.string().optional(),
+      });
+      const data = schema.parse(req.body);
+
+      const profile = await storage.getClientProfile(req.user!.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Client profile not found" });
+      }
+
+      const result = await createPayPalOrder({
+        clientId: profile.id,
+        amount: data.amount,
+        description: data.description,
+        sessionId: data.sessionId,
+        invoiceId: data.invoiceId,
+      });
+
+      if (!result) {
+        return res.status(500).json({ error: "Failed to create PayPal order" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        console.error("PayPal order error:", error);
+        res.status(500).json({ error: "Failed to create PayPal order" });
+      }
+    }
+  });
+
+  // Capture PayPal order (callback from PayPal)
+  app.get("/api/payments/paypal/capture", async (req, res) => {
+    try {
+      const orderId = req.query.token as string;
+      if (!orderId) {
+        return res.redirect("/client/billing?error=missing_order");
+      }
+
+      const result = await capturePayPalOrder(orderId);
+      if (result.success) {
+        res.redirect("/client/billing?success=true");
+      } else {
+        res.redirect("/client/billing?error=capture_failed");
+      }
+    } catch (error) {
+      console.error("PayPal capture error:", error);
+      res.redirect("/client/billing?error=capture_failed");
+    }
+  });
+
+  // Get client payments
+  app.get("/api/client/payments", requireClient, async (req, res) => {
+    try {
+      const profile = await storage.getClientProfile(req.user!.id);
+      if (!profile) {
+        return res.json([]);
+      }
+      const payments = await getPaymentsByClient(profile.id);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get payments" });
+    }
+  });
+
+  // Get client invoices
+  app.get("/api/client/invoices", requireClient, async (req, res) => {
+    try {
+      const profile = await storage.getClientProfile(req.user!.id);
+      if (!profile) {
+        return res.json([]);
+      }
+      const invoices = await getInvoicesByClient(profile.id);
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get invoices" });
+    }
+  });
+
+  // Coach: Get all payments
+  app.get("/api/coach/payments", requireCoach, async (req, res) => {
+    try {
+      const payments = await getAllPayments();
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get payments" });
+    }
+  });
+
+  // Coach: Get all invoices
+  app.get("/api/coach/invoices", requireCoach, async (req, res) => {
+    try {
+      const invoices = await getAllInvoices();
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get invoices" });
+    }
+  });
+
+  // Coach: Create invoice
+  app.post("/api/coach/invoices", requireCoach, async (req, res) => {
+    try {
+      const schema = z.object({
+        clientId: z.string(),
+        amount: z.number().min(1),
+        dueDate: z.string().optional(),
+        items: z.string(), // JSON array
+        notes: z.string().optional(),
+      });
+      const data = schema.parse(req.body);
+
+      const invoice = await createInvoice({
+        clientId: data.clientId,
+        amount: data.amount,
+        currency: "usd",
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        items: data.items,
+        notes: data.notes,
+      });
+
+      res.status(201).json(invoice);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create invoice" });
+      }
+    }
+  });
+
+  // Coach: Update invoice
+  app.patch("/api/coach/invoices/:id", requireCoach, async (req, res) => {
+    try {
+      const schema = z.object({
+        status: z.enum(["draft", "sent", "paid", "overdue", "cancelled"]).optional(),
+        notes: z.string().optional(),
+      });
+      const data = schema.parse(req.body);
+
+      const invoice = await updateInvoice(paramId(req.params.id), data);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      res.json(invoice);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update invoice" });
+      }
+    }
+  });
+
+  // ============================================================
+  // CALENDAR SYNC ROUTES
+  // ============================================================
+
+  // Check if calendar sync is available
+  app.get("/api/calendar/status", requireAuth, async (req, res) => {
+    try {
+      const enabled = isCalendarEnabled();
+      const connected = enabled ? await hasCalendarConnected(req.user!.id) : false;
+      res.json({ enabled, connected });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get calendar status" });
+    }
+  });
+
+  // Start Google Calendar OAuth flow
+  app.get("/api/auth/google-calendar", requireAuth, (req, res) => {
+    if (!isCalendarEnabled()) {
+      return res.status(503).json({ error: "Google Calendar is not configured" });
+    }
+
+    // Encode user ID in state for callback
+    const state = Buffer.from(JSON.stringify({ userId: req.user!.id })).toString("base64");
+    const authUrl = getCalendarAuthUrl(state);
+    res.redirect(authUrl);
+  });
+
+  // Google Calendar OAuth callback
+  app.get("/api/auth/google-calendar/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      if (!code || !state) {
+        return res.redirect("/client/profile?calendar_error=missing_params");
+      }
+
+      // Decode state to get user ID
+      const stateData = JSON.parse(Buffer.from(state as string, "base64").toString());
+      const userId = stateData.userId;
+
+      if (!userId) {
+        return res.redirect("/client/profile?calendar_error=invalid_state");
+      }
+
+      // Exchange code for tokens
+      const tokens = await exchangeCalendarCode(code as string);
+      await saveCalendarTokens(userId, tokens);
+
+      res.redirect("/client/profile?calendar_connected=true");
+    } catch (error) {
+      console.error("Calendar OAuth error:", error);
+      res.redirect("/client/profile?calendar_error=oauth_failed");
+    }
+  });
+
+  // Disconnect Google Calendar
+  app.delete("/api/calendar/disconnect", requireAuth, async (req, res) => {
+    try {
+      await disconnectCalendar(req.user!.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to disconnect calendar" });
+    }
+  });
+
+  // Sync session to Google Calendar
+  app.post("/api/sessions/:id/sync-calendar", requireAuth, async (req, res) => {
+    try {
+      const sessionId = paramId(req.params.id);
+      const session = await storage.getSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      // Create or update calendar event
+      if (session.googleCalendarEventId) {
+        const success = await updateCalendarEvent(req.user!.id, session.googleCalendarEventId, {
+          id: session.id,
+          title: session.title,
+          description: session.description,
+          scheduledAt: session.scheduledAt,
+          duration: session.duration || 60,
+          meetingLink: session.meetingLink,
+        });
+        res.json({ success, eventId: session.googleCalendarEventId });
+      } else {
+        const eventId = await createCalendarEvent(req.user!.id, {
+          id: session.id,
+          title: session.title,
+          description: session.description,
+          scheduledAt: session.scheduledAt,
+          duration: session.duration || 60,
+          meetingLink: session.meetingLink,
+        });
+        res.json({ success: !!eventId, eventId });
+      }
+    } catch (error) {
+      console.error("Calendar sync error:", error);
+      res.status(500).json({ error: "Failed to sync to calendar" });
+    }
+  });
+
+  // Remove session from Google Calendar
+  app.delete("/api/sessions/:id/sync-calendar", requireAuth, async (req, res) => {
+    try {
+      const sessionId = paramId(req.params.id);
+      const session = await storage.getSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      if (!session.googleCalendarEventId) {
+        return res.status(400).json({ error: "Session is not synced to calendar" });
+      }
+
+      const success = await deleteCalendarEvent(
+        req.user!.id,
+        session.googleCalendarEventId,
+        sessionId
+      );
+      res.json({ success });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to remove from calendar" });
+    }
+  });
+
+  // ============================================================
+  // ANALYTICS ROUTES
+  // ============================================================
+
+  // Coach: Get practice overview metrics
+  app.get("/api/coach/analytics", requireCoach, async (req, res) => {
+    try {
+      const metrics = await getCoachOverviewMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Analytics error:", error);
+      res.status(500).json({ error: "Failed to get analytics" });
+    }
+  });
+
+  // Coach: Get revenue over time
+  app.get("/api/coach/analytics/revenue", requireCoach, async (req, res) => {
+    try {
+      const months = parseInt(req.query.months as string) || 6;
+      const data = await getMonthlyRevenue(months);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get revenue data" });
+    }
+  });
+
+  // Coach: Get sessions trend
+  app.get("/api/coach/analytics/sessions", requireCoach, async (req, res) => {
+    try {
+      const weeks = parseInt(req.query.weeks as string) || 8;
+      const data = await getSessionsTrend(weeks);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get sessions trend" });
+    }
+  });
+
+  // Coach: Get per-client metrics
+  app.get("/api/coach/clients/:id/analytics", requireCoach, async (req, res) => {
+    try {
+      const clientId = paramId(req.params.id);
+      const metrics = await getClientMetrics(clientId);
+      res.json(metrics);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get client metrics" });
+    }
+  });
+
+  // Client: Get personal progress metrics
+  app.get("/api/client/analytics", requireClient, async (req, res) => {
+    try {
+      const profile = await storage.getClientProfile(req.user!.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Client profile not found" });
+      }
+      const metrics = await getClientProgressMetrics(profile.id);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Client analytics error:", error);
+      res.status(500).json({ error: "Failed to get analytics" });
+    }
+  });
+
+  // Client: Get activity trend
+  app.get("/api/client/analytics/activity", requireClient, async (req, res) => {
+    try {
+      const profile = await storage.getClientProfile(req.user!.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Client profile not found" });
+      }
+      const months = parseInt(req.query.months as string) || 6;
+      const data = await getClientActivityTrend(profile.id, months);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get activity trend" });
+    }
+  });
 
   return httpServer;
 }

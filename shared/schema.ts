@@ -11,7 +11,10 @@ export const userRoleEnum = pgEnum("user_role", ["coach", "client"]);
 export const intakeStatusEnum = pgEnum("intake_status", ["pending", "accepted", "declined"]);
 export const sessionStatusEnum = pgEnum("session_status", ["pending_confirmation", "scheduled", "completed", "cancelled"]);
 export const actionStatusEnum = pgEnum("action_status", ["pending", "in_progress", "completed"]);
-export const notificationTypeEnum = pgEnum("notification_type", ["intake_submitted", "account_created", "session_scheduled", "session_reminder", "resource_uploaded", "action_assigned", "session_request"]);
+export const notificationTypeEnum = pgEnum("notification_type", ["intake_submitted", "account_created", "session_scheduled", "session_reminder", "resource_uploaded", "action_assigned", "session_request", "payment_received", "action_due", "session_cancelled"]);
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "completed", "failed", "refunded"]);
+export const paymentProviderEnum = pgEnum("payment_provider", ["stripe", "paypal"]);
+export const invoiceStatusEnum = pgEnum("invoice_status", ["draft", "sent", "paid", "overdue", "cancelled"]);
 
 // Client Profiles - extends user data for clients
 export const clientProfiles = pgTable("client_profiles", {
@@ -58,6 +61,10 @@ export const coachingSessions = pgTable("coaching_sessions", {
   sessionNotes: text("session_notes"),
   notesVisibleToClient: boolean("notes_visible_to_client").default(false),
   clientReflection: text("client_reflection"),
+  // Calendar sync fields
+  googleCalendarEventId: varchar("google_calendar_event_id"),
+  calendarSyncedAt: timestamp("calendar_synced_at"),
+  reminderSentAt: timestamp("reminder_sent_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -130,6 +137,56 @@ export const coachSettings = pgTable("coach_settings", {
   hourlyRate: integer("hourly_rate").default(150),
   sessionDuration: integer("session_duration").default(60),
   packageDiscount: integer("package_discount").default(10),
+  stripeAccountId: varchar("stripe_account_id"), // For Stripe Connect (optional)
+  paypalEmail: varchar("paypal_email"), // For PayPal payouts
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Payments
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull(),
+  invoiceId: varchar("invoice_id"),
+  sessionId: varchar("session_id"),
+  amount: integer("amount").notNull(), // Amount in cents
+  currency: varchar("currency").default("usd").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  provider: paymentProviderEnum("provider").notNull(),
+  providerPaymentId: varchar("provider_payment_id"), // Stripe payment_intent or PayPal order ID
+  providerCustomerId: varchar("provider_customer_id"), // Stripe customer ID
+  description: text("description"),
+  metadata: text("metadata"), // JSON string for additional data
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Invoices
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceNumber: varchar("invoice_number").notNull().unique(),
+  clientId: varchar("client_id").notNull(),
+  amount: integer("amount").notNull(), // Amount in cents
+  currency: varchar("currency").default("usd").notNull(),
+  status: invoiceStatusEnum("status").default("draft").notNull(),
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  items: text("items").notNull(), // JSON array of line items
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// OAuth tokens for calendar sync
+export const userOAuthTokens = pgTable("user_oauth_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  provider: varchar("provider").notNull(), // 'google_calendar', etc.
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"),
+  scope: text("scope"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -203,6 +260,24 @@ export const insertCoachSettingsSchema = createInsertSchema(coachSettings).omit(
   updatedAt: true,
 });
 
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserOAuthTokenSchema = createInsertSchema(userOAuthTokens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type ClientProfile = typeof clientProfiles.$inferSelect;
 export type InsertClientProfile = z.infer<typeof insertClientProfileSchema>;
@@ -230,3 +305,12 @@ export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 
 export type CoachSettings = typeof coachSettings.$inferSelect;
 export type InsertCoachSettings = z.infer<typeof insertCoachSettingsSchema>;
+
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+
+export type UserOAuthToken = typeof userOAuthTokens.$inferSelect;
+export type InsertUserOAuthToken = z.infer<typeof insertUserOAuthTokenSchema>;

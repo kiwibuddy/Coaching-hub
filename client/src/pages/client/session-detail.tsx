@@ -36,7 +36,14 @@ import {
   MessageSquare,
   Send,
   CalendarPlus,
+  Check,
+  RefreshCw,
 } from "lucide-react";
+
+interface CalendarStatus {
+  enabled: boolean;
+  connected: boolean;
+}
 
 const reflectionSchema = z.object({
   reflection: z.string().min(10, "Please write at least 10 characters"),
@@ -49,6 +56,30 @@ export default function SessionDetail() {
 
   const { data: session, isLoading: sessionLoading } = useQuery<Session>({
     queryKey: ["/api/client/sessions", id],
+  });
+
+  const { data: calendarStatus } = useQuery<CalendarStatus>({
+    queryKey: ["/api/calendar/status"],
+  });
+
+  const syncToCalendar = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/sessions/${id}/sync-calendar`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/client/sessions", id] });
+      toast({
+        title: "Session Synced",
+        description: "This session has been added to your Google Calendar.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Sync Failed",
+        description: "Could not sync to Google Calendar. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const { data: resources } = useQuery<Resource[]>({
@@ -177,7 +208,24 @@ export default function SessionDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {session.status === "scheduled" && (
+          {session.status === "scheduled" && calendarStatus?.connected && (
+            <Button
+              variant="outline"
+              onClick={() => syncToCalendar.mutate()}
+              disabled={syncToCalendar.isPending}
+              data-testid="button-sync-calendar"
+            >
+              {syncToCalendar.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : session.googleCalendarEventId ? (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              ) : (
+                <CalendarPlus className="mr-2 h-4 w-4" />
+              )}
+              {session.googleCalendarEventId ? "Update Calendar" : "Sync to Google"}
+            </Button>
+          )}
+          {session.status === "scheduled" && !calendarStatus?.connected && (
             <Button asChild variant="outline" data-testid="button-add-to-calendar">
               <a href={`/api/sessions/${id}/export-ics`} download>
                 <CalendarPlus className="mr-2 h-4 w-4" />

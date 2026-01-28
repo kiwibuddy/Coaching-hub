@@ -42,7 +42,9 @@ import { UserAvatar } from "@/components/user-avatar";
 import { FormSkeleton } from "@/components/loading-skeleton";
 import { TimezoneSelector } from "@/components/timezone-selector";
 import type { ClientProfile } from "@shared/schema";
-import { User, Bell, Shield, Loader2, Trash2, Globe } from "lucide-react";
+import { User, Bell, Shield, Loader2, Trash2, Globe, Calendar, Check, X } from "lucide-react";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 const profileSchema = z.object({
   phone: z.string().optional(),
@@ -52,14 +54,64 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
+interface CalendarStatus {
+  enabled: boolean;
+  connected: boolean;
+}
+
 export default function ClientProfile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
 
   const { data: profile, isLoading } = useQuery<ClientProfile>({
     queryKey: ["/api/client/profile"],
   });
+
+  const { data: calendarStatus } = useQuery<CalendarStatus>({
+    queryKey: ["/api/calendar/status"],
+  });
+
+  const disconnectCalendar = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/calendar/disconnect", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/calendar/status"] });
+      toast({
+        title: "Calendar Disconnected",
+        description: "Your Google Calendar has been disconnected.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to disconnect calendar. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle URL params for calendar connection status
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("calendar_connected") === "true") {
+      toast({
+        title: "Calendar Connected",
+        description: "Your Google Calendar has been connected successfully!",
+      });
+      window.history.replaceState({}, "", "/client/profile");
+      queryClient.invalidateQueries({ queryKey: ["/api/calendar/status"] });
+    } else if (params.get("calendar_error")) {
+      toast({
+        title: "Calendar Connection Failed",
+        description: "Could not connect to Google Calendar. Please try again.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", "/client/profile");
+    }
+  }, [location, toast, queryClient]);
 
   const updateTimezone = useMutation({
     mutationFn: async (timezone: string) => {
@@ -243,6 +295,64 @@ export default function ClientProfile() {
               </Form>
             </CardContent>
           </Card>
+
+          {/* Calendar Integration */}
+          {calendarStatus?.enabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Calendar Integration
+                </CardTitle>
+                <CardDescription>
+                  Connect your Google Calendar to automatically sync your coaching sessions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-4 rounded-lg border">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${calendarStatus.connected ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"}`}>
+                      {calendarStatus.connected ? (
+                        <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium">Google Calendar</p>
+                      <p className="text-sm text-muted-foreground">
+                        {calendarStatus.connected
+                          ? "Your calendar is connected. Sessions will be synced automatically."
+                          : "Connect to sync your coaching sessions to Google Calendar."}
+                      </p>
+                    </div>
+                  </div>
+                  {calendarStatus.connected ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => disconnectCalendar.mutate()}
+                      disabled={disconnectCalendar.isPending}
+                    >
+                      {disconnectCalendar.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <X className="h-4 w-4 mr-2" />
+                          Disconnect
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button asChild>
+                      <a href="/api/auth/google-calendar">
+                        Connect Calendar
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Data & Privacy */}
           <Card>

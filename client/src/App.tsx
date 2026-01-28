@@ -23,6 +23,7 @@ import ClientSessionDetail from "@/pages/client/session-detail";
 import ClientActions from "@/pages/client/actions";
 import ClientResources from "@/pages/client/resources";
 import ClientProfile from "@/pages/client/profile";
+import ClientBilling from "@/pages/client/billing";
 
 // Coach pages
 import CoachDashboard from "@/pages/coach/dashboard";
@@ -31,6 +32,8 @@ import CoachSessions from "@/pages/coach/sessions";
 import CoachIntake from "@/pages/coach/intake";
 import CoachResources from "@/pages/coach/resources";
 import CoachCalculator from "@/pages/coach/calculator";
+import CoachBilling from "@/pages/coach/billing";
+import CoachAnalytics from "@/pages/coach/analytics";
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode; role?: "coach" | "client" }) {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -185,6 +188,13 @@ function Router() {
           </ClientLayout>
         </ProtectedRoute>
       </Route>
+      <Route path="/client/billing">
+        <ProtectedRoute role="client">
+          <ClientLayout>
+            <ClientBilling />
+          </ClientLayout>
+        </ProtectedRoute>
+      </Route>
 
       {/* Coach routes */}
       <Route path="/coach">
@@ -226,6 +236,20 @@ function Router() {
         <ProtectedRoute role="coach">
           <CoachLayout>
             <CoachCalculator />
+          </CoachLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/coach/billing">
+        <ProtectedRoute role="coach">
+          <CoachLayout>
+            <CoachBilling />
+          </CoachLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/coach/analytics">
+        <ProtectedRoute role="coach">
+          <CoachLayout>
+            <CoachAnalytics />
           </CoachLayout>
         </ProtectedRoute>
       </Route>
