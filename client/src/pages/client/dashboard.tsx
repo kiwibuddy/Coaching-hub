@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { format, isPast, isFuture, isToday } from "date-fns";
 import { Link } from "wouter";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { DashboardSkeleton } from "@/components/loading-skeleton";
+import { ProgressRing, SessionTimeline } from "@/components/charts";
+import { AnimatedCard } from "@/components/animated-card";
 import { useAuth } from "@/hooks/use-auth";
 import type { Session, ActionItem } from "@shared/schema";
 import {
@@ -21,6 +23,7 @@ import {
   ListTodo,
   TrendingUp,
   Award,
+  History,
 } from "lucide-react";
 
 interface ClientProgressMetrics {
@@ -71,14 +74,19 @@ export default function ClientDashboard() {
   return (
     <div className="space-y-8 p-6">
       {/* Welcome Section */}
-      <div className="space-y-2">
+      <motion.div 
+        className="space-y-2"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <h1 className="font-serif text-3xl font-bold tracking-tight">
-          Welcome back, {user?.firstName || "there"}
+          Welcome back, <span className="gradient-text">{user?.firstName || "there"}</span>
         </h1>
         <p className="text-muted-foreground">
           Here's an overview of your coaching journey.
         </p>
-      </div>
+      </motion.div>
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -87,34 +95,44 @@ export default function ClientDashboard() {
           value={sessions?.length || 0}
           description="All time"
           icon={Calendar}
+          href="/client/sessions"
+          index={0}
         />
         <StatCard
           title="Completed Sessions"
           value={completedSessions.length}
           icon={CheckCircle2}
+          href="/client/sessions"
+          index={1}
         />
         <StatCard
           title="Pending Actions"
           value={pendingActions.length}
           description={`${completedActions.length} completed`}
           icon={Target}
+          href="/client/actions"
+          index={2}
         />
         <StatCard
           title="Next Session"
           value={nextSession ? format(new Date(nextSession.scheduledAt), "MMM d") : "None"}
           description={nextSession ? format(new Date(nextSession.scheduledAt), "h:mm a") : "Schedule one!"}
           icon={Clock}
+          href={nextSession ? `/client/sessions/${nextSession.id}` : "/client/sessions"}
+          index={3}
         />
         <StatCard
           title="Engagement Score"
           value={progressMetrics?.engagementScore || 0}
           description="Your coaching engagement"
           icon={TrendingUp}
+          index={4}
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Next Session Card */}
+        <AnimatedCard delay={0.5}>
         <Card className="lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
             <div>
@@ -169,8 +187,10 @@ export default function ClientDashboard() {
             )}
           </CardContent>
         </Card>
+        </AnimatedCard>
 
         {/* Action Items Card */}
+        <AnimatedCard delay={0.6}>
         <Card className="lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
             <div>
@@ -187,40 +207,56 @@ export default function ClientDashboard() {
           <CardContent>
             {actionItems && actionItems.length > 0 ? (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">{actionProgress}%</span>
+                <div className="flex items-center gap-6">
+                  <ProgressRing 
+                    progress={actionProgress} 
+                    size={100} 
+                    strokeWidth={8}
+                    label="Complete"
+                  />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Completed</span>
+                      <span className="font-medium">{completedActions.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Pending</span>
+                      <span className="font-medium">{pendingActions.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-medium">{actionItems.length}</span>
+                    </div>
                   </div>
-                  <Progress value={actionProgress} className="h-2" />
                 </div>
                 <div className="space-y-2">
                   {pendingActions.slice(0, 3).map((action) => (
-                    <div
-                      key={action.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover-elevate"
-                    >
-                      <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-2">
-                        <ListTodo className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <Link key={action.id} href="/client/actions">
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer">
+                        <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-2">
+                          <ListTodo className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{action.title}</p>
+                          {action.dueDate && (
+                            <p className="text-xs text-muted-foreground">
+                              Due {format(new Date(action.dueDate), "MMM d")}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {action.status}
+                        </Badge>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{action.title}</p>
-                        {action.dueDate && (
-                          <p className="text-xs text-muted-foreground">
-                            Due {format(new Date(action.dueDate), "MMM d")}
-                          </p>
-                        )}
-                      </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {action.status}
-                      </Badge>
-                    </div>
+                    </Link>
                   ))}
                 </div>
                 {pendingActions.length > 3 && (
-                  <p className="text-sm text-muted-foreground text-center">
-                    +{pendingActions.length - 3} more actions
-                  </p>
+                  <Link href="/client/actions">
+                    <p className="text-sm text-primary hover:underline text-center cursor-pointer">
+                      View {pendingActions.length - 3} more actions →
+                    </p>
+                  </Link>
                 )}
               </div>
             ) : (
@@ -232,41 +268,37 @@ export default function ClientDashboard() {
             )}
           </CardContent>
         </Card>
+        </AnimatedCard>
       </div>
 
-      {/* Recent Sessions */}
-      {completedSessions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Sessions</CardTitle>
-            <CardDescription>Your completed coaching sessions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {completedSessions.slice(0, 3).map((session) => (
-                <Link key={session.id} href={`/client/sessions/${session.id}`}>
-                  <div className="flex items-center gap-4 p-4 rounded-lg border bg-card hover-elevate cursor-pointer">
-                    <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{session.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(session.scheduledAt), "MMMM d, yyyy")}
-                      </p>
-                    </div>
-                    {session.sessionNotes && session.notesVisibleToClient && (
-                      <Badge variant="outline">
-                        <FileText className="mr-1 h-3 w-3" />
-                        Notes
-                      </Badge>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
+      {/* Coaching Journey Timeline */}
+      {sessions && sessions.length > 0 && (
+        <AnimatedCard delay={0.7}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <History className="h-4 w-4 text-muted-foreground" />
+                  Your Coaching Journey
+                </CardTitle>
+                <CardDescription>Timeline of your sessions</CardDescription>
+              </div>
+              <Link href="/client/sessions">
+                <Button variant="ghost" size="sm">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <SessionTimeline 
+                sessions={sessions} 
+                maxItems={5} 
+              basePath="/client/sessions"
+            />
           </CardContent>
-        </Card>
+          </Card>
+        </AnimatedCard>
       )}
     </div>
   );
