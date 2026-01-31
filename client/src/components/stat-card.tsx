@@ -87,6 +87,7 @@ interface StatCardProps {
 export function StatCard({ title, value, description, icon: Icon, href, trend, sparklineData, index = 0 }: StatCardProps) {
   const cardContent = (
     <motion.div
+      className="h-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
@@ -95,7 +96,7 @@ export function StatCard({ title, value, description, icon: Icon, href, trend, s
         ease: [0.25, 0.1, 0.25, 1]
       }}
     >
-      <Card className={`hover-elevate hover-glow transition-all duration-300 stat-card-premium ${href ? 'cursor-pointer hover:border-primary/50' : ''}`}>
+      <Card className={`h-full hover-elevate hover-glow transition-all duration-300 stat-card-premium ${href ? 'cursor-pointer hover:border-primary/50' : ''}`}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
@@ -139,7 +140,7 @@ export function StatCard({ title, value, description, icon: Icon, href, trend, s
   );
 
   if (href) {
-    return <Link href={href}>{cardContent}</Link>;
+    return <Link href={href} className="h-full block">{cardContent}</Link>;
   }
 
   return cardContent;

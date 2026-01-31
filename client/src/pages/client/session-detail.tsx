@@ -55,7 +55,7 @@ export default function SessionDetail() {
   const queryClient = useQueryClient();
 
   const { data: session, isLoading: sessionLoading } = useQuery<Session>({
-    queryKey: ["/api/client/sessions", id],
+    queryKey: [`/api/client/sessions/${id}`],
   });
 
   const { data: calendarStatus } = useQuery<CalendarStatus>({
@@ -67,7 +67,7 @@ export default function SessionDetail() {
       return apiRequest("POST", `/api/sessions/${id}/sync-calendar`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/client/sessions", id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/client/sessions/${id}`] });
       toast({
         title: "Session Synced",
         description: "This session has been added to your Google Calendar.",
@@ -83,12 +83,12 @@ export default function SessionDetail() {
   });
 
   const { data: resources } = useQuery<Resource[]>({
-    queryKey: ["/api/client/sessions", id, "resources"],
+    queryKey: [`/api/client/sessions/${id}/resources`],
     enabled: !!id,
   });
 
   const { data: actionItems } = useQuery<ActionItem[]>({
-    queryKey: ["/api/client/sessions", id, "actions"],
+    queryKey: [`/api/client/sessions/${id}/actions`],
     enabled: !!id,
   });
 
@@ -97,7 +97,7 @@ export default function SessionDetail() {
 
   // Fetch messages with polling (every 5 seconds)
   const { data: messages, refetch: refetchMessages } = useQuery<Message[]>({
-    queryKey: ["/api/sessions", id, "messages"],
+    queryKey: [`/api/sessions/${id}/messages`],
     enabled: !!id,
     refetchInterval: 5000, // Poll every 5 seconds
   });
@@ -142,7 +142,7 @@ export default function SessionDetail() {
       return apiRequest("PATCH", `/api/client/sessions/${id}/reflection`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/client/sessions", id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/client/sessions/${id}`] });
       toast({
         title: "Reflection Saved",
         description: "Your reflection has been saved successfully.",
