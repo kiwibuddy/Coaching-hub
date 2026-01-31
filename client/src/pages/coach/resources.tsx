@@ -17,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -187,12 +186,14 @@ export default function CoachResources() {
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-resource">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Resource
-            </Button>
-          </DialogTrigger>
+          <Button
+            type="button"
+            data-testid="button-add-resource"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Resource
+          </Button>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Add Resource</DialogTitle>
@@ -256,7 +257,7 @@ export default function CoachResources() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Assign to Client (optional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-client">
                             <SelectValue placeholder="Select a client (or leave empty for all)" />
@@ -264,7 +265,7 @@ export default function CoachResources() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="">All clients</SelectItem>
-                          {clients?.filter(c => c.status === "active").map((client) => (
+                          {(clients ?? []).filter((c) => c.status === "active").map((client) => (
                             <SelectItem key={client.id} value={client.id}>
                               {getClientName(client)}
                             </SelectItem>
