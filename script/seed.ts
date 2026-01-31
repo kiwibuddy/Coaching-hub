@@ -1,12 +1,14 @@
 /**
- * Seed script: creates demo coach and client accounts with comprehensive sample data
- * so you can log in and test all features.
+ * Seed script: creates demo coach and 8 clients with robust demo data (~6 months
+ * of operation: varied tenure, 1 pending intake, sessions, action items, resources).
  *
  * Run: npm run db:seed
  *
- * Demo credentials (password for both): demo123
+ * Demo credentials (password for all): demo123
  * - Coach: coach@example.com
- * - Client: client@example.com
+ * - Clients: client@example.com, nathanielbaldock@gmail.com, alex@demo.com, jordan@demo.com,
+ *   sam@demo.com, morgan@demo.com, casey@demo.com, riley@demo.com
+ * - 1 pending intake: Jamie Rivera
  */
 import "dotenv/config";
 import bcrypt from "bcryptjs";
@@ -14,11 +16,62 @@ import { authStorage } from "../server/auth/storage";
 import { storage } from "../server/storage";
 import { db } from "../server/db";
 import { payments, invoices } from "@shared/schema";
-import { subDays, addDays, subWeeks, addHours } from "date-fns";
+import type { ClientProfile } from "@shared/schema";
+import { subDays, addDays, subWeeks, subMonths, addHours } from "date-fns";
 
 const DEMO_PASSWORD = "demo123";
 const COACH_EMAIL = "coach@example.com";
 const CLIENT_EMAIL = "client@example.com";
+
+type ClientSeed = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  goals: string;
+  phone?: string;
+  tenure: "6months" | "4months" | "2months" | "1month" | "new" | "dev";
+};
+
+async function ensureClient(
+  hashedPassword: string,
+  coachId: string,
+  def: ClientSeed
+): Promise<{ user: { id: string }; profile: ClientProfile }> {
+  let user = await authStorage.getUserByEmail(def.email);
+  if (!user) {
+    user = await authStorage.upsertUser({
+      email: def.email,
+      username: def.email,
+      password: hashedPassword,
+      firstName: def.firstName,
+      lastName: def.lastName,
+      role: "client",
+      emailVerified: true,
+    });
+  } else {
+    await authStorage.upsertUser({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      password: hashedPassword,
+      firstName: def.firstName,
+      lastName: def.lastName,
+      role: "client",
+      emailVerified: true,
+    });
+  }
+  let profile = await storage.getClientProfile(user!.id);
+  if (!profile) {
+    profile = await storage.createClientProfile({
+      userId: user!.id,
+      status: "active",
+      phone: def.phone ?? "+1 (555) 000-0000",
+      goals: def.goals,
+      preferredContactMethod: "email",
+    });
+  }
+  return { user: user!, profile };
+}
 
 async function seed() {
   console.log("Starting comprehensive seed...\n");
@@ -128,6 +181,78 @@ async function seed() {
       preferredContactMethod: "email",
     });
     console.log("✓ Created client profile for", DEV_EMAIL);
+  }
+
+  // ----- 6 additional demo clients (8 total with Demo Client + dev) -----
+  const extraClientDefs: ClientSeed[] = [
+    {
+      email: "alex@demo.com",
+      firstName: "Alex",
+      lastName: "Chen",
+      goals: "Career transition and leadership development. StrengthsFinder integration and executive presence.",
+      tenure: "6months",
+    },
+    {
+      email: "jordan@demo.com",
+      firstName: "Jordan",
+      lastName: "Smith",
+      goals: "Work-life balance and boundary setting. Time management and delegation.",
+      tenure: "4months",
+    },
+    {
+      email: "riley@demo.com",
+      firstName: "Riley",
+      lastName: "Davis",
+      goals: "Executive presence and board-level communication. Preparing for C-suite transition.",
+      tenure: "6months",
+    },
+    {
+      email: "sam@demo.com",
+      firstName: "Sam",
+      lastName: "Taylor",
+      goals: "StrengthsFinder integration and team leadership. Building high-performing teams.",
+      tenure: "2months",
+    },
+    {
+      email: "morgan@demo.com",
+      firstName: "Morgan",
+      lastName: "Lee",
+      goals: "Confidence and assertiveness. Navigating difficult conversations.",
+      tenure: "1month",
+    },
+    {
+      email: "casey@demo.com",
+      firstName: "Casey",
+      lastName: "Brown",
+      goals: "First-time people leader. Transitioning from IC to manager.",
+      tenure: "new",
+    },
+  ];
+
+  const extraClients: { user: { id: string }; profile: ClientProfile }[] = [];
+  for (const def of extraClientDefs) {
+    const c = await ensureClient(hashedPassword, coach.id, def);
+    extraClients.push(c);
+    console.log("✓ Client:", def.firstName, def.lastName, `(${def.email})`);
+  }
+
+  // ----- 1 new pending intake form -----
+  const existingIntakes = await storage.getAllIntakeForms();
+  if (existingIntakes.length < 2) {
+    await storage.createIntakeForm({
+      firstName: "Jamie",
+      lastName: "Rivera",
+      email: "jamie.rivera@example.com",
+      phone: "+1 (555) 987-6543",
+      goals: "I'm exploring executive coaching to prepare for a C-suite role in the next 18 months. I want to work on strategic vision, board communication, and leading through change.",
+      experience: "10+ years in operations and strategy. Led two major M&A integrations.",
+      availability: "Tuesday and Thursday afternoons, or Wednesday mornings.",
+      howDidYouHear: "LinkedIn",
+      location: "San Francisco, CA",
+      preferredMeetingFormat: "video_zoom",
+      status: "pending",
+    });
+    console.log("✓ Pending intake: Jamie Rivera (jamie.rivera@example.com)");
   }
 
   // ----- Coach settings -----
@@ -243,6 +368,60 @@ async function seed() {
       notesVisibleToClient: false,
     });
     console.log("  ✓ Session 6: Conflict Resolution (cancelled)");
+
+    // ----- Sessions across the other 7 clients (~6 months of operation) -----
+    // 6-month clients: ~11 sessions; 4-month: ~8; 3-month: ~5; 2-month: ~4; 1-month: ~2; new: ~1
+    const allOtherProfiles = [
+      { profile: devProfile, userId: devUser!.id, name: "Nathaniel", sessionsCount: 4 },
+      { profile: extraClients[0].profile, userId: (await authStorage.getUserByEmail("alex@demo.com"))!.id, name: "Alex Chen", sessionsCount: 11 },
+      { profile: extraClients[1].profile, userId: (await authStorage.getUserByEmail("jordan@demo.com"))!.id, name: "Jordan Smith", sessionsCount: 8 },
+      { profile: extraClients[2].profile, userId: (await authStorage.getUserByEmail("riley@demo.com"))!.id, name: "Riley Davis", sessionsCount: 11 },
+      { profile: extraClients[3].profile, userId: (await authStorage.getUserByEmail("sam@demo.com"))!.id, name: "Sam Taylor", sessionsCount: 4 },
+      { profile: extraClients[4].profile, userId: (await authStorage.getUserByEmail("morgan@demo.com"))!.id, name: "Morgan Lee", sessionsCount: 2 },
+      { profile: extraClients[5].profile, userId: (await authStorage.getUserByEmail("casey@demo.com"))!.id, name: "Casey Brown", sessionsCount: 1 },
+    ];
+
+    const sessionTitles = [
+      "Discovery & Goals",
+      "Values & Priorities",
+      "Progress Review",
+      "Skill Deep Dive",
+      "Action Planning",
+      "Mid-Program Check-in",
+      "Accountability Session",
+      "Next Steps",
+      "Wrap-up",
+    ];
+
+    let sessionCount = 6;
+    for (const { profile: prof, userId: uid, name, sessionsCount: n } of allOtherProfiles) {
+      // Spread past sessions over ~6 months (26w), 4 months (18w), 2 months (12w), 1 month (6w), or new (2w)
+      const baseWeeksAgo = n >= 10 ? 26 : n >= 6 ? 18 : n >= 4 ? 12 : n >= 2 ? 6 : 2;
+      for (let i = 0; i < n; i++) {
+        const weeksAgo = baseWeeksAgo - i * (baseWeeksAgo / Math.max(1, n - 1));
+        const isPast = i < n - 1 || (n === 1 && i === 0);
+        const isUpcoming = !isPast && i === n - 1;
+        const scheduledAt = isUpcoming
+          ? addDays(new Date(), 7 + i * 7)
+          : subWeeks(new Date(), Math.max(1, Math.floor(weeksAgo)));
+        const status = isUpcoming ? "scheduled" : isPast ? (i === 0 && n > 1 ? "cancelled" : "completed") : "scheduled";
+        const title = sessionTitles[Math.min(i, sessionTitles.length - 1)] + (n > 1 ? ` (${name})` : "");
+        await storage.createSession({
+          clientId: prof.id,
+          title: i === 0 ? `Discovery Session – ${name}` : title,
+          description: "Coaching session.",
+          scheduledAt,
+          duration: 60,
+          status,
+          requestedBy: i % 2 === 0 ? "coach" : "client",
+          meetingLink: status === "scheduled" ? "https://meet.google.com/abc-defg-hij" : undefined,
+          sessionNotes: status === "completed" ? `Solid session with ${name}.` : undefined,
+          notesVisibleToClient: status === "completed",
+        });
+        sessionCount++;
+      }
+      console.log(`  ✓ ${n} sessions for ${name} (total: ${sessionCount})`);
+    }
 
     // ----- Action Items with various statuses -----
     console.log("\nCreating action items...");
@@ -534,13 +713,11 @@ async function seed() {
   console.log("│ Client  │ client@example.com  │ /client          │");
   console.log("└─────────┴─────────────────────┴──────────────────┘");
   console.log("\nDemo data includes:");
-  console.log("  • 6 sessions (3 completed, 2 upcoming, 1 cancelled)");
-  console.log("  • 7 action items (3 completed, 2 in-progress, 2 pending)");
-  console.log("  • 4 resources");
-  console.log("  • 3 invoices ($525 + $175 paid, $350 pending)");
-  console.log("  • 2 payments (Stripe + PayPal)");
-  console.log("  • Session messages");
-  console.log("  • Notifications for both users");
+  console.log("  • 8 clients (varied tenure: 6 months to new), 1 pending intake");
+  console.log("  • Sessions across all clients (~6 months of operation)");
+  console.log("  • Action items, resources, session messages");
+  console.log("  • 3 invoices ($525 + $175 paid, $350 pending), 2 payments");
+  console.log("  • Notifications for coach and clients");
   console.log("");
 
   process.exit(0);

@@ -165,6 +165,38 @@ After schema and seed, the live app should use the Coaching-hub schema and data.
 
 ---
 
+## Troubleshooting: "column \"email_verified\" does not exist"
+
+If the live app shows a JSON error like `{"message":"column \"email_verified\" does not exist"}`, the **Railway database schema is out of date**. The app code expects columns (e.g. `email_verified` on the users table) that don’t exist in that database yet.
+
+**Fix:** Run the schema push and seed **against the Railway database** from your machine:
+
+1. **Get the Railway database URL**
+   - Railway → your project → **Postgres** service (or the DB your app uses).
+   - Open **Variables** or **Connect** and copy the **DATABASE_URL** (or `DATABASE_PRIVATE_URL`). It should look like `postgresql://postgres:xxx@xxx.railway.app:5432/railway`.
+
+2. **Use that URL locally (one-off)**
+   - In your **Coaching-hub** repo folder, create or edit `.env` and set:
+     ```env
+     DATABASE_URL=postgresql://...paste-the-railway-url-here...
+     ```
+   - Or run the next commands with the URL in the environment:
+     ```bash
+     export DATABASE_URL='postgresql://...'
+     ```
+
+3. **Apply schema and seed**
+   ```bash
+   cd /path/to/Coaching-hub
+   npm run db:push    # creates/updates tables (including email_verified)
+   npm run db:seed    # creates demo users so you can log in
+   ```
+
+4. **Reload the live app**  
+   After `db:push` and `db:seed` finish, refresh the Railway app. The error should be gone. You can log in with the seeded users (e.g. `coach@example.com` / `client@example.com` / `nathanielbaldock@gmail.com`, password `demo123`).
+
+---
+
 ## Quick Checklist
 
 - [ ] Railway project uses **Coaching-hub** GitHub repo (and correct branch).

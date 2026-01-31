@@ -14,11 +14,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, Phone, MapPin, Clock, CheckCircle, ArrowRight, ArrowLeft, Palette } from "lucide-react";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { Loader2, Building2, Phone, MapPin, Clock, CheckCircle, ArrowRight, ArrowLeft, Palette, Pencil, Shield, Users } from "lucide-react";
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { TimezoneSelector } from "@/components/timezone-selector";
 import { ThemeSelector, applyColorTheme, type ColorTheme } from "@/components/theme-selector";
+
+type EditingSection = null | "practice" | "contact" | "time";
 
 interface CoachSettings {
   id?: string;
@@ -48,6 +51,7 @@ export default function CoachSetup() {
   const [phone, setPhone] = useState<string | undefined>("");
   const [timezone, setTimezone] = useState("");
   const [hourlyRate, setHourlyRate] = useState("150");
+  const [editingSection, setEditingSection] = useState<EditingSection>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -175,10 +179,254 @@ export default function CoachSetup() {
   const nextStep = () => setStep((s) => Math.min(s + 1, 4));
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
+  const saveSection = (section: EditingSection) => {
+    if (!section) return;
+    const onSaved = () => {
+      setEditingSection(null);
+      toast({ title: "Settings saved", description: "Your changes have been saved." });
+    };
+    if (section === "practice") {
+      saveMutation.mutate({ businessName, bio }, { onSuccess: onSaved });
+    } else if (section === "contact") {
+      let countryCode = "";
+      let phoneNumber = phone || "";
+      if (phone && phone.startsWith("+")) {
+        const match = phone.match(/^\+(\d{1,4})/);
+        if (match) {
+          countryCode = "+" + match[1];
+          phoneNumber = phone.slice(countryCode.length);
+        }
+      }
+      saveMutation.mutate({ location, countryCode, phone: phoneNumber }, { onSuccess: onSaved });
+    } else if (section === "time") {
+      saveMutation.mutate(
+        { hourlyRate: parseInt(hourlyRate, 10) || 150, timezone: timezone || undefined },
+        { onSuccess: onSaved }
+      );
+    }
+  };
+
+  const isSaving = saveMutation.isPending;
+
   if (settingsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Settings summary view (after profile is completed) – industry-standard single page with editable sections
+  if (settings?.onboardingCompleted) {
+    const displayPhone = settings.countryCode && settings.phone
+      ? `${settings.countryCode}${settings.phone}`
+      : settings?.phone;
+
+    return (
+      <div className="space-y-6 p-6 max-w-2xl mx-auto">
+        <div>
+          <h1 className="font-serif text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your profile and practice details. Edit any section to update.
+          </p>
+        </div>
+
+        {/* Practice information */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <CardTitle>Practice information</CardTitle>
+            </div>
+            {editingSection !== "practice" && (
+              <Button variant="ghost" size="sm" onClick={() => setEditingSection("practice")} className="text-muted-foreground">
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {editingSection === "practice" ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="summary-businessName">Business Name (optional)</Label>
+                  <Input
+                    id="summary-businessName"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="e.g., Mindful Leadership Coaching"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="summary-bio">About You / Your Practice</Label>
+                  <Textarea
+                    id="summary-bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    rows={4}
+                    placeholder="Tell clients about your coaching approach..."
+                  />
+                  <p className="text-xs text-muted-foreground">This will be visible to clients on your profile.</p>
+                </div>
+                <div className="flex gap-2">
+                  <LoadingButton onClick={() => saveSection("practice")} loading={isSaving} loadingText="Saving...">
+                    Save
+                  </LoadingButton>
+                  <Button variant="outline" onClick={() => setEditingSection(null)} disabled={isSaving}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                {settings.businessName && <p><span className="text-muted-foreground">Business name:</span> {settings.businessName}</p>}
+                {settings.bio ? (
+                  <p><span className="text-muted-foreground">About:</span> {settings.bio.slice(0, 200)}{settings.bio.length > 200 ? "…" : ""}</p>
+                ) : (
+                  <p className="text-muted-foreground italic">No practice description yet.</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Contact information */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-primary" />
+              <CardTitle>Contact information</CardTitle>
+            </div>
+            {editingSection !== "contact" && (
+              <Button variant="ghost" size="sm" onClick={() => setEditingSection("contact")} className="text-muted-foreground">
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {editingSection === "contact" ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label><MapPin className="inline h-4 w-4 mr-1" /> Location</Label>
+                  <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g., New York, NY, USA" />
+                </div>
+                <div className="space-y-2">
+                  <Label><Phone className="inline h-4 w-4 mr-1" /> Phone</Label>
+                  <div className="phone-input-container">
+                    <PhoneInput
+                      international
+                      countryCallingCodeEditable={false}
+                      defaultCountry="US"
+                      placeholder="Enter phone number"
+                      value={phone}
+                      onChange={setPhone}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <LoadingButton onClick={() => saveSection("contact")} loading={isSaving} loadingText="Saving...">Save</LoadingButton>
+                  <Button variant="outline" onClick={() => setEditingSection(null)} disabled={isSaving}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                {settings.location && <p><span className="text-muted-foreground">Location:</span> {settings.location}</p>}
+                {displayPhone ? <p><span className="text-muted-foreground">Phone:</span> {displayPhone}</p> : <p className="text-muted-foreground italic">No phone added.</p>}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Time & rates */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              <CardTitle>Time & rates</CardTitle>
+            </div>
+            {editingSection !== "time" && (
+              <Button variant="ghost" size="sm" onClick={() => setEditingSection("time")} className="text-muted-foreground">
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {editingSection === "time" ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label><Clock className="inline h-4 w-4 mr-1" /> Timezone</Label>
+                  <TimezoneSelector value={timezone} onChange={setTimezone} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Default hourly rate (USD)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                    <Input type="number" min={0} value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className="pl-7" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <LoadingButton onClick={() => saveSection("time")} loading={isSaving} loadingText="Saving...">Save</LoadingButton>
+                  <Button variant="outline" onClick={() => setEditingSection(null)} disabled={isSaving}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <p><span className="text-muted-foreground">Timezone:</span> {user?.timezone || timezone || "Not set"}</p>
+                <p><span className="text-muted-foreground">Hourly rate:</span> ${settings.hourlyRate ?? hourlyRate}/hour</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Color theme – unchanged */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5 text-primary" />
+              Color theme
+            </CardTitle>
+            <CardDescription>
+              Choose how your portal looks. This applies to your coach view; clients can set their own theme in Profile.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeSelector
+              value={(settings?.colorTheme as ColorTheme) ?? undefined}
+              onChange={(theme) => themeMutation.mutate(theme)}
+              disabled={themeMutation.isPending}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Data & account – where client data export/removal lives (industry standard) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Data & account
+            </CardTitle>
+            <CardDescription>
+              Client data and coaching journey export or removal
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border p-4 bg-muted/30">
+              <h4 className="font-medium flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4" />
+                Client data
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                To export a client&apos;s coaching journey or remove client information, go to <strong>Clients</strong> → select the client → open their profile. Use the options there to export their data or remove them from your practice. This keeps data actions in context and follows common practice for coach/client hubs.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <style>{`
+          .phone-input-container .PhoneInput { display: flex; align-items: center; }
+          .phone-input-container .PhoneInputInput { flex: 1; border: none; outline: none; font-size: 0.875rem; }
+        `}</style>
       </div>
     );
   }

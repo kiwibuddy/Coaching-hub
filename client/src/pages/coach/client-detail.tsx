@@ -91,6 +91,8 @@ export default function CoachClientDetail() {
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
   const [resourceFile, setResourceFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("sessions");
+  const [actionReviewId, setActionReviewId] = useState<string | null>(null);
 
   const { data: client, isLoading: clientLoading } = useQuery<ClientProfileWithUser>({
     queryKey: [`/api/coach/clients/${clientId}`],
@@ -284,9 +286,15 @@ export default function CoachClientDetail() {
         </Badge>
       </div>
 
-      {/* Overview Cards */}
+      {/* Overview Cards – click to open that tab’s full detail */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => setActiveTab("sessions")}
+          onKeyDown={(e) => e.key === "Enter" && setActiveTab("sessions")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -298,7 +306,13 @@ export default function CoachClientDetail() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => setActiveTab("actions")}
+          onKeyDown={(e) => e.key === "Enter" && setActiveTab("actions")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Action Items</CardTitle>
             <CheckSquare className="h-4 w-4 text-muted-foreground" />
@@ -310,17 +324,29 @@ export default function CoachClientDetail() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => setActiveTab("resources")}
+          onKeyDown={(e) => e.key === "Enter" && setActiveTab("resources")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Resources</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{clientResources.length}</div>
-            <p className="text-xs text-muted-foreground">shared with client</p>
+            <p className="text-xs text-muted-foreground">private + global</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => setActiveTab("sessions")}
+          onKeyDown={(e) => e.key === "Enter" && setActiveTab("sessions")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Engagement</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -375,8 +401,8 @@ export default function CoachClientDetail() {
         </CardContent>
       </Card>
 
-      {/* Tabs for Sessions, Actions, Resources */}
-      <Tabs defaultValue="sessions" className="space-y-4">
+      {/* Tabs for Sessions, Actions, Resources (switched when you click a summary card) */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="sessions">
             Sessions ({clientSessions.length})
@@ -540,7 +566,11 @@ export default function CoachClientDetail() {
                     {clientActions
                       .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
                       .map((action) => (
-                        <TableRow key={action.id}>
+                        <TableRow
+                          key={action.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setActionReviewId(action.id)}
+                        >
                           <TableCell className="font-medium">{action.title}</TableCell>
                           <TableCell className="text-muted-foreground max-w-xs truncate">
                             {action.description || "-"}
@@ -585,7 +615,7 @@ export default function CoachClientDetail() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle>Resources</CardTitle>
-                <CardDescription>Private to this client. Only you and the client can see these.</CardDescription>
+                <CardDescription>Private resources for this client plus global resources visible to all clients.</CardDescription>
               </div>
               <Dialog open={resourceDialogOpen} onOpenChange={setResourceDialogOpen}>
                 <DialogTrigger asChild>
@@ -720,6 +750,61 @@ export default function CoachClientDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Action item review – open when you click an action row */}
+      <Dialog open={!!actionReviewId} onOpenChange={(open) => !open && setActionReviewId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Action item</DialogTitle>
+            <DialogDescription>Review details for this action item.</DialogDescription>
+          </DialogHeader>
+          {actionReviewId && (() => {
+            const action = clientActions.find((a) => a.id === actionReviewId);
+            if (!action) return null;
+            return (
+              <div className="space-y-4 py-2">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Title</p>
+                  <p className="font-medium">{action.title}</p>
+                </div>
+                {action.description && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Description</p>
+                    <p className="text-sm">{action.description}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Due date</p>
+                  <p className="text-sm">
+                    {action.dueDate
+                      ? format(new Date(action.dueDate), "MMMM d, yyyy")
+                      : "No due date"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <Badge
+                    variant={
+                      action.status === "completed"
+                        ? "default"
+                        : action.status === "in_progress"
+                        ? "secondary"
+                        : "outline"
+                    }
+                  >
+                    {action.status}
+                  </Badge>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActionReviewId(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
