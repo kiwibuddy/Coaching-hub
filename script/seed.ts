@@ -35,6 +35,7 @@ async function seed() {
       firstName: "Demo",
       lastName: "Coach",
       role: "coach",
+      emailVerified: true, // Demo account – skip verification for local/testing
     });
     console.log("✓ Created coach:", COACH_EMAIL);
   } else {
@@ -46,6 +47,7 @@ async function seed() {
       firstName: coach.firstName ?? "Demo",
       lastName: coach.lastName ?? "Coach",
       role: "coach",
+      emailVerified: true, // Demo account – skip verification for local/testing
     });
     console.log("✓ Updated coach password:", COACH_EMAIL);
   }
@@ -60,6 +62,7 @@ async function seed() {
       firstName: "Demo",
       lastName: "Client",
       role: "client",
+      emailVerified: true, // Demo account – skip verification for local/testing
     });
     console.log("✓ Created client:", CLIENT_EMAIL);
   } else {
@@ -71,6 +74,7 @@ async function seed() {
       firstName: client.firstName ?? "Demo",
       lastName: client.lastName ?? "Client",
       role: "client",
+      emailVerified: true, // Demo account – skip verification for local/testing
     });
     console.log("✓ Updated client password:", CLIENT_EMAIL);
   }
@@ -86,6 +90,44 @@ async function seed() {
       preferredContactMethod: "email",
     });
     console.log("✓ Created client profile");
+  }
+
+  // ----- Dev login (nathanielbaldock@gmail.com) so you can log in at localhost:3001 -----
+  const DEV_EMAIL = "nathanielbaldock@gmail.com";
+  let devUser = await authStorage.getUserByEmail(DEV_EMAIL);
+  if (!devUser) {
+    devUser = await authStorage.upsertUser({
+      email: DEV_EMAIL,
+      username: DEV_EMAIL,
+      password: hashedPassword,
+      firstName: "Nathaniel",
+      lastName: "Baldock",
+      role: "client",
+      emailVerified: true,
+    });
+    console.log("✓ Created dev login:", DEV_EMAIL, "(password: demo123)");
+  } else {
+    await authStorage.upsertUser({
+      id: devUser.id,
+      email: devUser.email,
+      username: devUser.username,
+      password: hashedPassword,
+      firstName: devUser.firstName ?? "Nathaniel",
+      lastName: devUser.lastName ?? "Baldock",
+      role: devUser.role ?? "client",
+      emailVerified: true,
+    });
+    console.log("✓ Updated dev login:", DEV_EMAIL, "(password: demo123)");
+  }
+  let devProfile = await storage.getClientProfile(devUser!.id);
+  if (!devProfile) {
+    devProfile = await storage.createClientProfile({
+      userId: devUser!.id,
+      status: "active",
+      goals: "Dev account for testing the portal.",
+      preferredContactMethod: "email",
+    });
+    console.log("✓ Created client profile for", DEV_EMAIL);
   }
 
   // ----- Coach settings -----

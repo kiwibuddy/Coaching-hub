@@ -910,14 +910,17 @@ export async function registerRoutes(
         createdBy: req.user!.id,
       });
       
-      // Notify client
-      await storage.createNotification({
-        userId: data.clientId,
-        type: "action_assigned",
-        title: "New Action Item",
-        message: `A new action item "${data.title}" has been assigned to you.`,
-        relatedId: action.id,
-      });
+      // Notify client (data.clientId is client profile id; resolve to user id)
+      const clientProfile = await storage.getClientProfileById(data.clientId);
+      if (clientProfile) {
+        await storage.createNotification({
+          userId: clientProfile.userId,
+          type: "action_assigned",
+          title: "New Action Item",
+          message: `A new action item "${data.title}" has been assigned to you.`,
+          relatedId: action.id,
+        });
+      }
       
       res.status(201).json(action);
     } catch (error) {
@@ -959,6 +962,8 @@ export async function registerRoutes(
         paypalEmail: z.string().optional(),
         // Onboarding
         onboardingCompleted: z.boolean().optional(),
+        // Appearance
+        colorTheme: z.enum(["ember", "ocean", "forest", "twilight", "slate", "rose"]).optional(),
       });
       const data = settingsSchema.parse(req.body);
       

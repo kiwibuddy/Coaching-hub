@@ -5,6 +5,7 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -42,9 +43,10 @@ import { UserAvatar } from "@/components/user-avatar";
 import { FormSkeleton } from "@/components/loading-skeleton";
 import { TimezoneSelector } from "@/components/timezone-selector";
 import type { ClientProfile } from "@shared/schema";
-import { User, Bell, Shield, Loader2, Trash2, Globe, Calendar, Check, X } from "lucide-react";
+import { User, Bell, Shield, Loader2, Trash2, Globe, Calendar, Check, X, Palette } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
+import { ThemeSelector, applyColorTheme, type ColorTheme } from "@/components/theme-selector";
 
 // Notification preferences type
 interface NotificationPreference {
@@ -92,6 +94,20 @@ export default function ClientProfile() {
 
   const { data: calendarStatus } = useQuery<CalendarStatus>({
     queryKey: ["/api/calendar/status"],
+  });
+
+  const themeMutation = useMutation({
+    mutationFn: async (colorTheme: ColorTheme) => {
+      applyColorTheme(colorTheme);
+      return apiRequest("PATCH", "/api/auth/user", { colorTheme });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "Theme updated", description: "Your portal theme has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Failed to save theme", variant: "destructive" });
+    },
   });
 
   // Load notification preferences from profile
@@ -352,18 +368,37 @@ export default function ClientProfile() {
                     )}
                   />
 
-                  <Button type="submit" disabled={updateProfile.isPending} data-testid="button-save-profile">
-                    {updateProfile.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </Button>
+                  <LoadingButton 
+                    type="submit" 
+                    loading={updateProfile.isPending}
+                    success={updateProfile.isSuccess}
+                    loadingText="Saving..."
+                    data-testid="button-save-profile"
+                  >
+                    Save Changes
+                  </LoadingButton>
                 </form>
               </Form>
+            </CardContent>
+          </Card>
+
+          {/* Color theme */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-primary" />
+                Color theme
+              </CardTitle>
+              <CardDescription>
+                Personalize how your portal looks. Choose from 6 themes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ThemeSelector
+                value={(user as { colorTheme?: ColorTheme } | undefined)?.colorTheme ?? undefined}
+                onChange={(theme) => themeMutation.mutate(theme)}
+                disabled={themeMutation.isPending}
+              />
             </CardContent>
           </Card>
 

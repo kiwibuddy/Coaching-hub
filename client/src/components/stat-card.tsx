@@ -1,10 +1,73 @@
 "use client";
 
+import { useMemo } from "react";
 import { type LucideIcon } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { AnimatedCounter } from "@/components/animated-counter";
+
+interface SparklineProps {
+  data: number[];
+  width?: number;
+  height?: number;
+  color?: string;
+  showArea?: boolean;
+}
+
+function MiniSparkline({ 
+  data, 
+  width = 60, 
+  height = 24, 
+  color = "hsl(var(--primary))",
+  showArea = true 
+}: SparklineProps) {
+  const pathData = useMemo(() => {
+    if (!data || data.length < 2) return { linePath: "", areaPath: "" };
+    
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+    
+    const points = data.map((value, i) => {
+      const x = (i / (data.length - 1)) * width;
+      const y = height - ((value - min) / range) * (height - 4) - 2;
+      return { x, y };
+    });
+    
+    const linePath = points
+      .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+      .join(" ");
+    
+    const areaPath = showArea
+      ? `${linePath} L ${width} ${height} L 0 ${height} Z`
+      : "";
+    
+    return { linePath, areaPath };
+  }, [data, width, height, showArea]);
+
+  if (!data || data.length < 2) return null;
+
+  return (
+    <svg width={width} height={height} className="overflow-visible">
+      {showArea && (
+        <path
+          d={pathData.areaPath}
+          fill={color}
+          fillOpacity={0.15}
+        />
+      )}
+      <path
+        d={pathData.linePath}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 interface StatCardProps {
   title: string;
@@ -16,10 +79,12 @@ interface StatCardProps {
     value: number;
     isPositive: boolean;
   };
+  /** Optional sparkline data (array of values for the last N periods) */
+  sparklineData?: number[];
   index?: number;
 }
 
-export function StatCard({ title, value, description, icon: Icon, href, trend, index = 0 }: StatCardProps) {
+export function StatCard({ title, value, description, icon: Icon, href, trend, sparklineData, index = 0 }: StatCardProps) {
   const cardContent = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -55,13 +120,18 @@ export function StatCard({ title, value, description, icon: Icon, href, trend, i
                 </p>
               )}
             </div>
-            <motion.div 
-              className="rounded-full bg-primary/10 p-3"
-              whileHover={{ scale: 1.1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            >
-              <Icon className="h-5 w-5 text-primary" />
-            </motion.div>
+            <div className="flex items-center gap-3">
+              {sparklineData && sparklineData.length >= 2 && (
+                <MiniSparkline data={sparklineData} />
+              )}
+              <motion.div 
+                className="rounded-full bg-primary/10 p-3"
+                whileHover={{ scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <Icon className="h-5 w-5 text-primary" />
+              </motion.div>
+            </div>
           </div>
         </CardContent>
       </Card>

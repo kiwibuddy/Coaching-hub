@@ -1,0 +1,11 @@
+---
+description: This workspace is Coaching-hub; all edits and references must stay in this repo only.
+alwaysApply: true
+---
+
+# Primary project: Coaching-hub
+
+- **This repository is Coaching-hub** (the newer, up-to-date GitHub repo). All file paths, edits, and code changes must be made **only in this Coaching-hub project**.
+- Do **not** assume or edit **Holger-Coaching-Portal** or any other repo unless the user explicitly asks to sync or compare with another repo.
+- When the user says "the app", "the project", "Coaching-hub", or "PORT=3001", they mean this repository (Coaching-hub).
+- Default run command for local dev: `PORT=3001 npm run dev` (or as in package.json).

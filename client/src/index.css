@@ -192,6 +192,94 @@
   --shadow-2xl: 0px 25px 50px -12px hsl(0 0% 0% / 0.55);
 }
 
+/* ================================
+   COLOR THEMES
+   Each theme only overrides primary-related colors.
+   The neutral colors (background, card, etc.) stay the same.
+   ================================ */
+
+/* OCEAN - Teal blue, calm and trustworthy */
+[data-theme="ocean"] {
+  --primary: 200 75% 45%;
+  --sidebar-primary: 200 75% 45%;
+  --sidebar-ring: 200 75% 45%;
+  --ring: 200 75% 45%;
+  --chart-1: 200 75% 45%;
+}
+[data-theme="ocean"].dark {
+  --primary: 200 80% 55%;
+  --sidebar-primary: 200 80% 55%;
+  --sidebar-ring: 200 80% 55%;
+  --ring: 200 80% 55%;
+  --chart-1: 200 80% 55%;
+}
+
+/* FOREST - Green, growth-oriented */
+[data-theme="forest"] {
+  --primary: 155 70% 40%;
+  --sidebar-primary: 155 70% 40%;
+  --sidebar-ring: 155 70% 40%;
+  --ring: 155 70% 40%;
+  --chart-1: 155 70% 40%;
+}
+[data-theme="forest"].dark {
+  --primary: 155 75% 50%;
+  --sidebar-primary: 155 75% 50%;
+  --sidebar-ring: 155 75% 50%;
+  --ring: 155 75% 50%;
+  --chart-1: 155 75% 50%;
+}
+
+/* TWILIGHT - Purple, creative and sophisticated */
+[data-theme="twilight"] {
+  --primary: 260 70% 55%;
+  --sidebar-primary: 260 70% 55%;
+  --sidebar-ring: 260 70% 55%;
+  --ring: 260 70% 55%;
+  --chart-1: 260 70% 55%;
+}
+[data-theme="twilight"].dark {
+  --primary: 260 75% 65%;
+  --sidebar-primary: 260 75% 65%;
+  --sidebar-ring: 260 75% 65%;
+  --ring: 260 75% 65%;
+  --chart-1: 260 75% 65%;
+}
+
+/* SLATE - Blue-gray, minimal and corporate */
+[data-theme="slate"] {
+  --primary: 220 15% 35%;
+  --sidebar-primary: 220 15% 35%;
+  --sidebar-ring: 220 15% 35%;
+  --ring: 220 15% 35%;
+  --chart-1: 220 15% 35%;
+}
+[data-theme="slate"].dark {
+  --primary: 220 20% 55%;
+  --sidebar-primary: 220 20% 55%;
+  --sidebar-ring: 220 20% 55%;
+  --ring: 220 20% 55%;
+  --chart-1: 220 20% 55%;
+}
+
+/* ROSE - Pink, warm and approachable */
+[data-theme="rose"] {
+  --primary: 350 80% 50%;
+  --sidebar-primary: 350 80% 50%;
+  --sidebar-ring: 350 80% 50%;
+  --ring: 350 80% 50%;
+  --chart-1: 350 80% 50%;
+}
+[data-theme="rose"].dark {
+  --primary: 350 85% 60%;
+  --sidebar-primary: 350 85% 60%;
+  --sidebar-ring: 350 85% 60%;
+  --ring: 350 85% 60%;
+  --chart-1: 350 85% 60%;
+}
+
+/* EMBER is the default (no data-theme attribute needed) */
+
 @layer base {
   * {
     @apply border-border;
@@ -414,4 +502,120 @@
       background-position: -200% 0;
     }
   }
+
+  /* Shake animation for error feedback on buttons */
+  .animate-shake {
+    animation: shake 0.3s ease-in-out;
+  }
+
+  @keyframes shake {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-4px);
+    }
+    75% {
+      transform: translateX(4px);
+    }
+  }
+
+  /* Success flash for buttons */
+  .animate-success-flash {
+    animation: success-flash 0.3s ease-out;
+  }
+
+  @keyframes success-flash {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+/* ============================================
+   Landing Page (Holger Schein) – hero, grain, cards, badges
+   ============================================ */
+
+.grain-subtle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.015'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.hero-gradient {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.08) 0%,
+    hsl(var(--muted)) 50%,
+    hsl(35 30% 95%) 100%
+  );
+}
+
+.dark .hero-gradient {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.15) 0%,
+    hsl(var(--background)) 50%,
+    hsl(25 15% 12%) 100%
+  );
+}
+
+.card-premium {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-premium:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-xl);
+}
+
+.badge-landing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.badge-landing:hover {
+  transform: scale(1.03);
+}
+
+.badge-landing-primary {
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+
+.badge-landing-success {
+  background: hsl(165 60% 40% / 0.1);
+  color: hsl(165 60% 35%);
+}
+
+.dark .badge-landing-success {
+  background: hsl(165 55% 45% / 0.15);
+  color: hsl(165 55% 50%);
+}
+
+.badge-landing-secondary {
+  background: hsl(35 80% 55% / 0.1);
+  color: hsl(35 70% 40%);
+}
+
+.dark .badge-landing-secondary {
+  background: hsl(35 75% 60% / 0.15);
+  color: hsl(35 75% 60%);
 }

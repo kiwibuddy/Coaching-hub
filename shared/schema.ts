@@ -163,6 +163,8 @@ export const coachSettings = pgTable("coach_settings", {
   paypalEmail: varchar("paypal_email"), // For PayPal payouts
   // Onboarding
   onboardingCompleted: boolean("onboarding_completed").default(false),
+  // Appearance
+  colorTheme: varchar("color_theme").default("ember"), // Default theme for coach's portal
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

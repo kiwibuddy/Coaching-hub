@@ -22,7 +22,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Sparkles,
   LayoutDashboard,
   Calendar,
   FileText,
@@ -73,7 +72,11 @@ export function AppSidebar({ role }: SidebarProps) {
       <SidebarHeader className="p-4">
         <Link href={role === "coach" ? "/coach" : "/client"}>
           <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Sparkles className="h-6 w-6 text-primary" />
+            <img
+              src="/logo.png"
+              alt="Holger Coaching"
+              className="h-8 w-auto flex-shrink-0"
+            />
             <span className="font-serif text-lg font-bold">Holger Coaching</span>
           </div>
         </Link>
@@ -128,7 +131,7 @@ export function AppSidebar({ role }: SidebarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
-              <Link href={role === "coach" ? "/coach" : "/client/profile"}>
+              <Link href={role === "coach" ? "/coach/setup" : "/client/profile"}>
                 <User className="mr-2 h-4 w-4" />
                 {role === "coach" ? "Settings" : "Profile"}
               </Link>

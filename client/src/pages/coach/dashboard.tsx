@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { format, isFuture, isToday, startOfToday, endOfWeek } from "date-fns";
+import { format, isFuture, isToday, startOfToday, endOfWeek, subWeeks, startOfWeek, endOfWeek as endOfWeekFn, isWithinInterval } from "date-fns";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { DashboardSkeleton } from "@/components/loading-skeleton";
-import { SessionsSparkline, ClientActivity } from "@/components/charts";
+import { SessionsSparkline, ClientActivity, EngagementHeatmap } from "@/components/charts";
+import { QuickActionsWidget } from "@/components/quick-actions-widget";
 import { AnimatedCard } from "@/components/animated-card";
+import { SessionCountdown } from "@/components/session-countdown";
 import { useAuth } from "@/hooks/use-auth";
 import type { Session, IntakeForm, ClientProfile } from "@shared/schema";
 import {
@@ -65,6 +67,36 @@ export default function CoachDashboard() {
   const weekEnd = endOfWeek(startOfToday());
   const thisWeekSessions = upcomingSessions.filter((s) => new Date(s.scheduledAt) <= weekEnd);
 
+  // Generate sparkline data for the last 4 weeks of sessions
+  const sessionsSparkline = (() => {
+    if (!sessions || sessions.length === 0) return undefined;
+    const now = new Date();
+    const data: number[] = [];
+    for (let i = 3; i >= 0; i--) {
+      const weekStart = startOfWeek(subWeeks(now, i));
+      const weekEndDate = endOfWeekFn(subWeeks(now, i));
+      const count = sessions.filter(s => {
+        const sessionDate = new Date(s.scheduledAt);
+        return isWithinInterval(sessionDate, { start: weekStart, end: weekEndDate });
+      }).length;
+      data.push(count);
+    }
+    return data;
+  })();
+
+  // Generate sparkline data for client count (mocked trend - in production would come from API)
+  const clientsSparkline = (() => {
+    if (!clients || clients.length === 0) return undefined;
+    // Mock data showing slight growth trend
+    const total = clients.length;
+    return [
+      Math.max(0, total - 3),
+      Math.max(0, total - 2),
+      Math.max(0, total - 1),
+      total
+    ];
+  })();
+
   return (
     <div className="space-y-8 p-6">
       {/* Welcome Section */}
@@ -89,6 +121,7 @@ export default function CoachDashboard() {
           value={activeClients.length}
           icon={Users}
           href="/coach/clients"
+          sparklineData={clientsSparkline}
           index={0}
         />
         <StatCard
@@ -105,6 +138,7 @@ export default function CoachDashboard() {
           description={`${completedSessions.length} completed`}
           icon={CheckCircle2}
           href="/coach/sessions"
+          sparklineData={sessionsSparkline}
           index={2}
         />
         <StatCard
@@ -149,6 +183,11 @@ export default function CoachDashboard() {
         </AnimatedCard>
       )}
 
+      {/* Quick Actions */}
+      <AnimatedCard delay={0.45}>
+        <QuickActionsWidget />
+      </AnimatedCard>
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Today's Schedule */}
         <AnimatedCard delay={0.5}>
@@ -180,9 +219,12 @@ export default function CoachDashboard() {
                           {format(new Date(session.scheduledAt), "h:mm a")} · {session.duration} min
                         </p>
                       </div>
-                      <Badge variant="secondary">
-                        {format(new Date(session.scheduledAt), "h:mm a")}
-                      </Badge>
+                      <SessionCountdown 
+                        scheduledAt={session.scheduledAt}
+                        meetingLink={session.meetingLink}
+                        variant="badge"
+                        size="sm"
+                      />
                     </div>
                   </Link>
                 ))}
@@ -235,23 +277,49 @@ export default function CoachDashboard() {
         </AnimatedCard>
       </div>
 
-      {/* Sessions Trend */}
-      {sessions && sessions.length > 0 && (
-        <AnimatedCard delay={0.7}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                Sessions Trend
-              </CardTitle>
-              <CardDescription>Your coaching activity over the past 4 weeks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SessionsSparkline sessions={sessions} weeks={4} height={100} />
-            </CardContent>
-          </Card>
-        </AnimatedCard>
-      )}
+      {/* Engagement Heatmap & Sessions Trend */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Engagement Heatmap */}
+        {activeClients.length > 0 && sessions && sessions.length > 0 && (
+          <AnimatedCard delay={0.7}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  Client Engagement
+                </CardTitle>
+                <CardDescription>Activity levels over the past 7 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EngagementHeatmap 
+                  clients={activeClients as any} 
+                  sessions={sessions} 
+                  days={7}
+                  maxClients={5} 
+                />
+              </CardContent>
+            </Card>
+          </AnimatedCard>
+        )}
+
+        {/* Sessions Trend */}
+        {sessions && sessions.length > 0 && (
+          <AnimatedCard delay={0.75}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  Sessions Trend
+                </CardTitle>
+                <CardDescription>Your coaching activity over the past 4 weeks</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SessionsSparkline sessions={sessions} weeks={4} height={100} />
+              </CardContent>
+            </Card>
+          </AnimatedCard>
+        )}
+      </div>
 
       {/* Upcoming This Week */}
       {thisWeekSessions.length > 0 && (

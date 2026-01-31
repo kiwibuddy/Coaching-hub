@@ -34,6 +34,9 @@ export function registerAuthRoutes(app: Express): void {
   );
 
   app.post("/api/auth/login", (req, res, next) => {
+    if (req.body?.email && typeof req.body.email === "string") {
+      req.body.email = req.body.email.trim().toLowerCase();
+    }
     passport.authenticate("local", async (err: Error | null, user: Express.User | false) => {
       if (err) return next(err);
       if (!user) {
@@ -58,10 +61,11 @@ export function registerAuthRoutes(app: Express): void {
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { email, password, firstName, lastName, role } = req.body;
+      let { email, password, firstName, lastName, role } = req.body;
       if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
       }
+      email = typeof email === "string" ? email.trim().toLowerCase() : email;
       const existing = await authStorage.getUserByEmail(email);
       if (existing) {
         return res.status(400).json({ message: "An account with this email already exists" });
@@ -264,13 +268,14 @@ export function registerAuthRoutes(app: Express): void {
   app.patch("/api/auth/user", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as { id: string };
-      const { firstName, lastName, timezone, onboardingCompleted } = req.body;
+      const { firstName, lastName, timezone, onboardingCompleted, colorTheme } = req.body;
 
-      const updates: { firstName?: string; lastName?: string; timezone?: string; onboardingCompleted?: boolean } = {};
+      const updates: { firstName?: string; lastName?: string; timezone?: string; onboardingCompleted?: boolean; colorTheme?: string } = {};
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;
       if (timezone !== undefined) updates.timezone = timezone;
       if (onboardingCompleted !== undefined) updates.onboardingCompleted = onboardingCompleted;
+      if (colorTheme !== undefined) updates.colorTheme = colorTheme;
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ message: "No valid fields to update" });

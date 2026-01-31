@@ -30,6 +30,7 @@ export const users = pgTable("users", {
   passwordResetToken: varchar("password_reset_token"), // Token for password reset
   passwordResetExpiry: timestamp("password_reset_expiry"), // Token expiry time
   onboardingCompleted: boolean("onboarding_completed").default(false), // Onboarding wizard completed
+  colorTheme: varchar("color_theme"), // Color theme preference: ember, ocean, forest, twilight, slate, rose
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

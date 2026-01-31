@@ -14,10 +14,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, Phone, MapPin, Clock, CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
+import { Loader2, Building2, Phone, MapPin, Clock, CheckCircle, ArrowRight, ArrowLeft, Palette } from "lucide-react";
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { TimezoneSelector } from "@/components/timezone-selector";
+import { ThemeSelector, applyColorTheme, type ColorTheme } from "@/components/theme-selector";
 
 interface CoachSettings {
   id?: string;
@@ -29,6 +30,7 @@ interface CoachSettings {
   hourlyRate?: number;
   sessionDuration?: number;
   onboardingCompleted?: boolean;
+  colorTheme?: ColorTheme | null;
 }
 
 interface User {
@@ -77,8 +79,9 @@ export default function CoachSetup() {
         setPhone(fullPhone);
       }
       if (settings.hourlyRate) setHourlyRate(settings.hourlyRate.toString());
+      if (settings.colorTheme) applyColorTheme(settings.colorTheme);
     }
-    
+
     // Auto-detect timezone
     if (user?.timezone) {
       setTimezone(user.timezone);
@@ -88,12 +91,7 @@ export default function CoachSetup() {
     }
   }, [settings, user]);
 
-  // Check if already completed onboarding
-  useEffect(() => {
-    if (settings?.onboardingCompleted) {
-      navigate("/coach");
-    }
-  }, [settings, navigate]);
+  // Allow coaches to open /coach/setup anytime as "Settings" (no redirect when onboarding already completed)
 
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<CoachSettings> & { timezone?: string }) => {
@@ -107,6 +105,20 @@ export default function CoachSetup() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/coach/settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+  });
+
+  const themeMutation = useMutation({
+    mutationFn: async (colorTheme: ColorTheme) => {
+      applyColorTheme(colorTheme);
+      return apiRequest("PATCH", "/api/coach/settings", { colorTheme });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/coach/settings"] });
+      toast({ title: "Theme updated", description: "Your portal theme has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Failed to save theme", variant: "destructive" });
     },
   });
 
@@ -407,6 +419,26 @@ export default function CoachSetup() {
             Skip for now
           </Button>
         </div>
+
+        {/* Color theme – always visible on Settings */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5 text-primary" />
+              Color theme
+            </CardTitle>
+            <CardDescription>
+              Choose how your portal looks. This applies to your coach view; clients can set their own theme in Profile.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeSelector
+              value={(settings?.colorTheme as ColorTheme) ?? undefined}
+              onChange={(theme) => themeMutation.mutate(theme)}
+              disabled={themeMutation.isPending}
+            />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Custom styles for phone input */}

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -270,21 +271,16 @@ export function DemoLoginDialog({ trigger }: LoginDialogProps) {
                 </div>
               )}
 
-              <Button
+              <LoadingButton
                 type="submit"
                 className="w-full"
-                disabled={loginMutation.isPending || !email || !password}
+                loading={loginMutation.isPending}
+                loadingText="Signing in..."
+                disabled={!email || !password}
                 data-testid="button-submit-login"
               >
-                {loginMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
-              </Button>
+                Sign In
+              </LoadingButton>
             </form>
           </TabsContent>
 

@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -34,12 +35,16 @@ import CoachSetup from "@/pages/coach/setup";
 import CoachClients from "@/pages/coach/clients";
 import CoachClientDetail from "@/pages/coach/client-detail";
 import CoachSessions from "@/pages/coach/sessions";
+import CoachSessionDetail from "@/pages/coach/session-detail";
 import CoachIntake from "@/pages/coach/intake";
 import CoachResources from "@/pages/coach/resources";
 import CoachCalculator from "@/pages/coach/calculator";
 import CoachBilling from "@/pages/coach/billing";
 import CoachAnalytics from "@/pages/coach/analytics";
 import { OnboardingTour } from "@/components/onboarding-tour";
+import { CommandPalette } from "@/components/command-palette";
+import { useColorTheme } from "@/hooks/use-color-theme";
+import { DashboardErrorBoundary } from "@/components/dashboard-error-boundary";
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode; role?: "coach" | "client" }) {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -88,6 +93,9 @@ function ClientLayout({ children }: { children: React.ReactNode }) {
     queryKey: ["/api/auth/user"],
   });
   const [location] = useLocation();
+  
+  // Apply color theme
+  useColorTheme();
 
   const sidebarStyle = {
     "--sidebar-width": "16rem",
@@ -116,6 +124,7 @@ function ClientLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+      <CommandPalette />
       <OnboardingTour role="client" tourCompleted={userData?.onboardingCompleted} />
     </SidebarProvider>
   );
@@ -134,6 +143,11 @@ function CoachLayout({ children }: { children: React.ReactNode }) {
     queryKey: ["/api/auth/user"],
   });
   const [location] = useLocation();
+  const [sessionModalOpen, setSessionModalOpen] = React.useState(false);
+  const [noteModalOpen, setNoteModalOpen] = React.useState(false);
+  
+  // Apply color theme
+  useColorTheme();
 
   const sidebarStyle = {
     "--sidebar-width": "16rem",
@@ -144,6 +158,10 @@ function CoachLayout({ children }: { children: React.ReactNode }) {
   if (!settingsLoading && settings && !settings.onboardingCompleted && !location.includes("/coach/setup")) {
     return <Redirect to="/coach/setup" />;
   }
+
+  // Import quick modals lazily
+  const QuickSessionModal = React.lazy(() => import("@/components/modals/quick-session-modal").then(m => ({ default: m.QuickSessionModal })));
+  const QuickNoteModal = React.lazy(() => import("@/components/modals/quick-note-modal").then(m => ({ default: m.QuickNoteModal })));
 
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
@@ -162,6 +180,14 @@ function CoachLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+      <CommandPalette 
+        onScheduleSession={() => setSessionModalOpen(true)}
+        onAddNote={() => setNoteModalOpen(true)}
+      />
+      <React.Suspense fallback={null}>
+        <QuickSessionModal open={sessionModalOpen} onOpenChange={setSessionModalOpen} />
+        <QuickNoteModal open={noteModalOpen} onOpenChange={setNoteModalOpen} />
+      </React.Suspense>
       <OnboardingTour role="coach" tourCompleted={userData?.onboardingCompleted} />
     </SidebarProvider>
   );
@@ -260,7 +286,9 @@ function Router() {
       <Route path="/coach">
         <ProtectedRoute role="coach">
           <CoachLayout>
-            <CoachDashboard />
+            <DashboardErrorBoundary fallbackTitle="Coach dashboard error">
+              <CoachDashboard />
+            </DashboardErrorBoundary>
           </CoachLayout>
         </ProtectedRoute>
       </Route>
@@ -275,6 +303,13 @@ function Router() {
         <ProtectedRoute role="coach">
           <CoachLayout>
             <CoachClientDetail />
+          </CoachLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/coach/sessions/:id">
+        <ProtectedRoute role="coach">
+          <CoachLayout>
+            <CoachSessionDetail />
           </CoachLayout>
         </ProtectedRoute>
       </Route>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -144,26 +144,19 @@ export default function CoachCalculator() {
               </div>
             </div>
 
-            <Button
+            <LoadingButton
               onClick={() =>
                 saveSettings.mutate({ hourlyRate, sessionDuration, packageDiscount })
               }
-              disabled={saveSettings.isPending}
+              loading={saveSettings.isPending}
+              success={saveSettings.isSuccess}
+              loadingText="Saving..."
               className="w-full"
               data-testid="button-save-settings"
             >
-              {saveSettings.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Settings
-                </>
-              )}
-            </Button>
+              <Save className="mr-2 h-4 w-4" />
+              Save Settings
+            </LoadingButton>
           </CardContent>
         </Card>
 

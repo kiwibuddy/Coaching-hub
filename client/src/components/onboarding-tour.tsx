@@ -82,14 +82,15 @@ export function OnboardingTour({ role, tourCompleted }: OnboardingTourProps) {
 
   const steps = role === "coach" ? COACH_STEPS : CLIENT_STEPS;
 
-  // Start tour if not completed
-  useEffect(() => {
-    if (tourCompleted === false) {
-      // Small delay to ensure page is fully rendered
-      const timer = setTimeout(() => setRun(true), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [tourCompleted]);
+  // Disabled auto-start: Joyride was causing a white screen when it attached
+  // (e.g. portal/target issues). Tour can be started via RestartTourButton or
+  // re-enabled here once targets and layout are verified.
+  // useEffect(() => {
+  //   if (tourCompleted === false) {
+  //     const timer = setTimeout(() => setRun(true), 500);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [tourCompleted]);
 
   const markTourCompleted = useMutation({
     mutationFn: async () => {
@@ -115,6 +116,9 @@ export function OnboardingTour({ role, tourCompleted }: OnboardingTourProps) {
       markTourCompleted.mutate();
     }
   };
+
+  // Only mount Joyride when run is true to avoid white screen from library init
+  if (!run) return null;
 
   return (
     <Joyride

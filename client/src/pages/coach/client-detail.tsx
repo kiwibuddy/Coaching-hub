@@ -1,9 +1,33 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { format } from "date-fns";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { apiRequest } from "@/lib/queryClient";
+import { useUpload } from "@/hooks/use-upload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -15,6 +39,8 @@ import {
 } from "@/components/ui/table";
 import { DashboardSkeleton } from "@/components/loading-skeleton";
 import { EmptyState } from "@/components/empty-state";
+import { useToast } from "@/hooks/use-toast";
+import { LoadingButton } from "@/components/ui/loading-button";
 import type { ClientProfile, Session, ActionItem, Resource } from "@shared/schema";
 import {
   ArrowLeft,
@@ -26,7 +52,26 @@ import {
   CheckSquare,
   FileText,
   BarChart3,
+  Plus,
+  Upload,
+  Download,
 } from "lucide-react";
+import { useState } from "react";
+
+const actionSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  dueDate: z.string().optional(),
+  status: z.enum(["pending", "in_progress", "completed"]).optional(),
+});
+
+const resourceSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+});
+
+type ActionFormValues = z.infer<typeof actionSchema>;
+type ResourceFormValues = z.infer<typeof resourceSchema>;
 
 // Extended type with user data from the API
 type ClientProfileWithUser = ClientProfile & {
@@ -41,6 +86,11 @@ type ClientProfileWithUser = ClientProfile & {
 export default function CoachClientDetail() {
   const params = useParams<{ id: string }>();
   const clientId = params.id;
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
+  const [resourceFile, setResourceFile] = useState<File | null>(null);
 
   const { data: client, isLoading: clientLoading } = useQuery<ClientProfileWithUser>({
     queryKey: [`/api/coach/clients/${clientId}`],
@@ -58,6 +108,104 @@ export default function CoachClientDetail() {
   const { data: resources } = useQuery<Resource[]>({
     queryKey: ["/api/coach/resources"],
   });
+
+  const { uploadFile } = useUpload({
+    onError: (error) => {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const actionForm = useForm<ActionFormValues>({
+    resolver: zodResolver(actionSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      dueDate: "",
+      status: "pending",
+    },
+  });
+
+  const resourceForm = useForm<ResourceFormValues>({
+    resolver: zodResolver(resourceSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+    },
+  });
+
+  const createAction = useMutation({
+    mutationFn: async (data: ActionFormValues) => {
+      return apiRequest("POST", "/api/coach/actions", {
+        clientId: clientId!,
+        title: data.title,
+        description: data.description,
+        dueDate: data.dueDate || undefined,
+        status: data.status,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/coach/actions"] });
+      toast({
+        title: "Action Item Added",
+        description: "The action item has been assigned to this client.",
+      });
+      actionForm.reset();
+      setActionDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add action item. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createResource = useMutation({
+    mutationFn: async (data: ResourceFormValues & { fileUrl?: string; fileType?: string; fileName?: string }) => {
+      return apiRequest("POST", "/api/coach/resources", {
+        ...data,
+        clientId: clientId!,
+        isGlobal: false,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/coach/resources"] });
+      toast({
+        title: "Resource Added",
+        description: "The resource has been shared with this client.",
+      });
+      resourceForm.reset();
+      setResourceFile(null);
+      setResourceDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add resource. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleResourceSubmit = async (data: ResourceFormValues) => {
+    let fileUrl = "";
+    let fileType = "";
+    let fileName = "";
+    if (resourceFile) {
+      const result = await uploadFile(resourceFile);
+      if (result) {
+        fileUrl = result.objectPath;
+        fileType = resourceFile.type.split("/")[1] || "file";
+        fileName = resourceFile.name;
+      }
+    }
+    createResource.mutate({ ...data, fileUrl, fileType, fileName });
+  };
 
   const { data: analytics } = useQuery<{
     totalSessions: number;
@@ -250,35 +398,45 @@ export default function CoachClientDetail() {
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Duration</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {clientSessions.length > 0 ? (
-                  clientSessions.slice(0, 10).map((session) => (
-                    <TableRow key={session.id}>
-                      <TableCell className="font-medium">{session.title}</TableCell>
-                      <TableCell>
-                        {format(new Date(session.scheduledAt!), "MMM d, yyyy 'at' h:mm a")}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            session.status === "completed"
-                              ? "default"
-                              : session.status === "cancelled"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {session.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{session.duration} min</TableCell>
-                    </TableRow>
-                  ))
+                  clientSessions
+                    .sort((a, b) => new Date(b.scheduledAt!).getTime() - new Date(a.scheduledAt!).getTime())
+                    .map((session) => (
+                      <TableRow key={session.id}>
+                        <TableCell className="font-medium">{session.title}</TableCell>
+                        <TableCell>
+                          {format(new Date(session.scheduledAt!), "MMM d, yyyy 'at' h:mm a")}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              session.status === "completed"
+                                ? "default"
+                                : session.status === "cancelled"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {session.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{session.duration} min</TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/coach/sessions/${session.id}`}>
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No sessions scheduled yet
                     </TableCell>
                   </TableRow>
@@ -290,93 +448,275 @@ export default function CoachClientDetail() {
 
         <TabsContent value="actions">
           <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Action Item</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clientActions.length > 0 ? (
-                  clientActions.slice(0, 10).map((action) => (
-                    <TableRow key={action.id}>
-                      <TableCell className="font-medium">{action.title}</TableCell>
-                      <TableCell className="text-muted-foreground max-w-xs truncate">
-                        {action.description || "-"}
-                      </TableCell>
-                      <TableCell>
-                        {action.dueDate
-                          ? format(new Date(action.dueDate), "MMM d, yyyy")
-                          : "No due date"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            action.status === "completed"
-                              ? "default"
-                              : action.status === "in_progress"
-                              ? "secondary"
-                              : "outline"
-                          }
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle>Action Items</CardTitle>
+                <CardDescription>Private to this client. Only you and the client can see these.</CardDescription>
+              </div>
+              <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-add-action">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Action Item
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Add Action Item</DialogTitle>
+                    <DialogDescription>
+                      Assign a new action item to {getClientName()}. The client will see it on their Action Items page.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...actionForm}>
+                    <form
+                      onSubmit={actionForm.handleSubmit((data) => createAction.mutate(data))}
+                      className="space-y-4"
+                    >
+                      <FormField
+                        control={actionForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Title *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. Complete reflection worksheet" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={actionForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Optional details..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={actionForm.control}
+                        name="dueDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Due date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <DialogFooter>
+                        <LoadingButton
+                          type="submit"
+                          loading={createAction.isPending}
+                          loadingText="Adding..."
                         >
-                          {action.status}
-                        </Badge>
-                      </TableCell>
+                          Add Action Item
+                        </LoadingButton>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {clientActions.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Action Item</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No action items assigned yet
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {clientActions
+                      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+                      .map((action) => (
+                        <TableRow key={action.id}>
+                          <TableCell className="font-medium">{action.title}</TableCell>
+                          <TableCell className="text-muted-foreground max-w-xs truncate">
+                            {action.description || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {action.dueDate
+                              ? format(new Date(action.dueDate), "MMM d, yyyy")
+                              : "No due date"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                action.status === "completed"
+                                  ? "default"
+                                  : action.status === "in_progress"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
+                              {action.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <EmptyState
+                  icon={Target}
+                  title="No action items"
+                  description="Add an action item to assign tasks to this client."
+                  actionLabel="Add Action Item"
+                  onAction={() => setActionDialogOpen(true)}
+                />
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="resources">
           <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Resource</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Uploaded</TableHead>
-                  <TableHead>Scope</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clientResources.length > 0 ? (
-                  clientResources.slice(0, 10).map((resource) => (
-                    <TableRow key={resource.id}>
-                      <TableCell className="font-medium">{resource.title}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{resource.fileType || "file"}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(resource.createdAt!), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={resource.isGlobal ? "secondary" : "default"}>
-                          {resource.isGlobal ? "Global" : "Personal"}
-                        </Badge>
-                      </TableCell>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle>Resources</CardTitle>
+                <CardDescription>Private to this client. Only you and the client can see these.</CardDescription>
+              </div>
+              <Dialog open={resourceDialogOpen} onOpenChange={setResourceDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-add-resource">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Resource
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Add Resource</DialogTitle>
+                    <DialogDescription>
+                      Share a resource with {getClientName()}. Summary notes, readings, or files specific to your sessions.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...resourceForm}>
+                    <form
+                      onSubmit={resourceForm.handleSubmit(handleResourceSubmit)}
+                      className="space-y-4"
+                    >
+                      <FormField
+                        control={resourceForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Title *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. Session summary notes" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={resourceForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Optional description..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div>
+                        <FormLabel>File (optional)</FormLabel>
+                        <div className="mt-2 border-2 border-dashed rounded-lg p-4 text-center">
+                          <input
+                            type="file"
+                            className="hidden"
+                            id="client-resource-file"
+                            onChange={(e) => setResourceFile(e.target.files?.[0] || null)}
+                          />
+                          <label htmlFor="client-resource-file" className="cursor-pointer">
+                            <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
+                            {resourceFile ? (
+                              <p className="text-sm font-medium">{resourceFile.name}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Click to upload a file</p>
+                            )}
+                          </label>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <LoadingButton
+                          type="submit"
+                          loading={createResource.isPending}
+                          loadingText="Adding..."
+                        >
+                          Add Resource
+                        </LoadingButton>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {clientResources.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Resource</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Uploaded</TableHead>
+                      <TableHead>Scope</TableHead>
+                      <TableHead className="w-[80px]" />
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No resources shared yet
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {clientResources
+                      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+                      .map((resource) => (
+                        <TableRow key={resource.id}>
+                          <TableCell className="font-medium">{resource.title}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{resource.fileType || "file"}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(resource.createdAt!), "MMM d, yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={resource.isGlobal ? "secondary" : "default"}>
+                              {resource.isGlobal ? "Global" : "Personal"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {resource.fileUrl && (
+                              <Button size="sm" variant="ghost" asChild>
+                                <a href={resource.fileUrl} target="_blank" rel="noopener noreferrer">
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <EmptyState
+                  icon={FileText}
+                  title="No resources"
+                  description="Add a resource to share notes or files with this client."
+                  actionLabel="Add Resource"
+                  onAction={() => setResourceDialogOpen(true)}
+                />
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

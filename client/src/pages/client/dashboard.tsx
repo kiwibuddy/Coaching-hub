@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/empty-state";
 import { DashboardSkeleton } from "@/components/loading-skeleton";
 import { ProgressRing, SessionTimeline } from "@/components/charts";
 import { AnimatedCard } from "@/components/animated-card";
+import { SessionCountdown } from "@/components/session-countdown";
 import { useAuth } from "@/hooks/use-auth";
 import type { Session, ActionItem } from "@shared/schema";
 import {
@@ -162,10 +163,20 @@ export default function ClientDashboard() {
                       {format(new Date(nextSession.scheduledAt), "h:mm a")} · {nextSession.duration} minutes
                     </p>
                   </div>
-                  <Badge variant={isToday(new Date(nextSession.scheduledAt)) ? "default" : "secondary"}>
-                    {isToday(new Date(nextSession.scheduledAt)) ? "Today" : format(new Date(nextSession.scheduledAt), "MMM d")}
-                  </Badge>
+                  <SessionCountdown 
+                    scheduledAt={nextSession.scheduledAt}
+                    meetingLink={nextSession.meetingLink}
+                    variant="badge"
+                    size="default"
+                  />
                 </div>
+                {/* Join Now Card when session is imminent */}
+                <SessionCountdown 
+                  scheduledAt={nextSession.scheduledAt}
+                  meetingLink={nextSession.meetingLink}
+                  variant="card"
+                  showWithinHours={1}
+                />
                 {nextSession.prepNotes && (
                   <div className="p-4 rounded-lg border bg-card">
                     <p className="text-sm font-medium mb-2">Pre-session notes</p>
