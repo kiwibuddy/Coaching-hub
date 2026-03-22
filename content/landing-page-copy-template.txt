@@ -1,0 +1,360 @@
+================================================================================
+HOLGER SCHEIN — WEBSITE HOME PAGE COPY
+================================================================================
+
+HOW TO USE THIS DOCUMENT
+• Only change the text on the lines AFTER each label (e.g. after “TITLE:”).
+• Do not remove or rename the labels (words in ALL CAPS with a colon).
+• Part 1 is the main story visitors read — start here.
+• Part 2 is menus, buttons, and tiny labels — optional; skip it if you’re happy with how those read today.
+• If you’re unsure about a line, leave it as-is or add a short note in [brackets].
+
+Your developer will copy your approved text into the website.
+
+================================================================================
+PART 1 — MAIN PAGE CONTENT (headlines, story, services, testimonials)
+================================================================================
+
+--- WHO YOU ARE (logo area) ---
+
+BRAND NAME:
+Holger Schein
+
+TAGLINE:
+Life Coaching & StrengthsFinder
+
+--------------------------------------------------------------------------------
+HERO (top of the page)
+--------------------------------------------------------------------------------
+
+EYEBROW (small line above your name):
+StrengthsFinder Certified Coach • 35+ Years Experience
+
+MAIN HEADLINE:
+Holger Schein
+
+SUBHEADLINE — PART 1 (before the orange words):
+Life is Your Story:
+
+SUBHEADLINE — PART 2 (orange on the site):
+Make it a Best Seller
+
+BODY PARAGRAPH:
+I help leaders and individuals grow in self-awareness and emotional maturity through internationally recognized coaching, specializing in StrengthsFinder, life transitions, and cross-cultural leadership development.
+
+HERO IMAGE — CAPTION TITLE (on the photo):
+Transformative Coaching
+
+HERO IMAGE — CAPTION SUBTITLE:
+Helping leaders discover their strengths and unlock their potential
+
+--------------------------------------------------------------------------------
+HOW I HELP (services)
+--------------------------------------------------------------------------------
+
+SECTION LABEL (small orange):
+Services
+
+SECTION TITLE:
+How I Help
+
+SECTION SUBTITLE:
+Personalized coaching that meets you where you are
+
+--- SERVICE 1 ---
+TITLE:
+StrengthsFinder Coaching
+
+BODY:
+Discover your unique talents and learn how to leverage them for meaningful impact in work and life.
+
+--- SERVICE 2 ---
+TITLE:
+Life Transitions
+
+BODY:
+Navigate career changes, new seasons, and major decisions with clarity and confidence.
+
+--- SERVICE 3 ---
+TITLE:
+Leadership Development
+
+BODY:
+Grow in emotional awareness and maturity to lead with greater effectiveness and authenticity.
+
+--------------------------------------------------------------------------------
+HOW COACHING WORKS (process)
+--------------------------------------------------------------------------------
+
+SECTION LABEL (small orange):
+The Process
+
+SECTION TITLE:
+How Coaching Works
+
+SECTION SUBTITLE:
+A relational journey focused on your growth—80% of sessions happen in-person
+
+--- STEP 1 ---
+TITLE:
+Initial Inquiry
+
+BODY:
+Fill out the intake form. I'll review and reach out within 48 hours.
+
+--- STEP 2 ---
+TITLE:
+Meet & Greet
+
+BODY:
+A conversation to see if we're a good fit—about relationship, not sales.
+
+--- STEP 3 ---
+TITLE:
+In-Person Sessions
+
+BODY:
+80% face-to-face in Tauranga or your location. Real connection.
+
+--- STEP 4 ---
+TITLE:
+Reflect & Grow
+
+BODY:
+Reflect on insights, set action items. Your portal tracks everything.
+
+--------------------------------------------------------------------------------
+ABOUT
+--------------------------------------------------------------------------------
+
+SECTION LABEL (small orange):
+About Me
+
+SECTION TITLE:
+Your Story Matters. Let's Make It Count.
+
+BODY PARAGRAPH 1:
+I've spent over 35 years working across cultures—from Europe to the Pacific Islands—helping people discover who they truly are and who they're becoming.
+
+BODY PARAGRAPH 2 — OPENING (bold on the site):
+Change happens in relationship.
+
+BODY PARAGRAPH 2 — REST:
+That's why 80% of my coaching happens in-person. There's something about sitting across from someone, looking them in the eye, and walking alongside them that video calls simply can't replicate.
+
+SUBSECTION TITLE:
+35+ Years of International Experience
+
+SUBSECTION BODY:
+I bring decades of multi-cultural experience working with individuals and teams within and outside NGO settings. As a fully trained StrengthsFinder coach (Individual Top 5, Couples/Team Coaching, and all 34 Talent Coaching), I help people understand themselves deeply and relate differently to others.
+
+BADGE 1:
+Based in Tauranga, NZ
+
+BADGE 2:
+Serving Internationally
+
+BADGE 3:
+Loves Good Coffee
+
+ABOUT PHOTO — NAME ON IMAGE:
+Holger Schein
+
+ABOUT PHOTO — LINE UNDER NAME:
+Life Coach & StrengthsFinder Specialist
+
+--------------------------------------------------------------------------------
+TESTIMONIALS
+--------------------------------------------------------------------------------
+
+SECTION LABEL (small orange):
+Testimonials
+
+SECTION TITLE:
+What Clients Say
+
+SECTION SUBTITLE:
+Real stories from leaders who've experienced transformation
+
+--- TESTIMONIAL 1 ---
+CLIENT NAME:
+James Mitchell
+
+ROLE:
+CEO, Tech Startup
+
+LOCATION:
+Auckland
+
+QUOTE:
+Holger helped me see my blind spots as a leader. His StrengthsFinder work revealed why I was burning out—I was leading from my weaknesses instead of my strengths. After 6 months, my team engagement scores are up 40%.
+
+CATEGORY TAG:
+Corporate Leadership
+
+--- TESTIMONIAL 2 ---
+CLIENT NAME:
+Pastor David Taufa
+
+ROLE:
+Senior Pastor
+
+LOCATION:
+Tauranga
+
+QUOTE:
+After 20 years in ministry, I was burning out. Holger's patient, relational approach helped me rediscover my purpose. His cross-cultural experience meant he truly understood Pacific Island church leadership.
+
+CATEGORY TAG:
+Church Leadership
+
+--- TESTIMONIAL 3 ---
+CLIENT NAME:
+Rachel Wong
+
+ROLE:
+Business Owner
+
+LOCATION:
+Wellington
+
+QUOTE:
+The StrengthsFinder work transformed how I build my team. I used to hire people just like me—now I understand complementary strengths. Holger doesn't just coach; he genuinely cares about your growth.
+
+CATEGORY TAG:
+Small Business
+
+--- TESTIMONIAL 4 ---
+CLIENT NAME:
+Mark Stevens
+
+ROLE:
+Career Transition
+
+LOCATION:
+Christchurch
+
+QUOTE:
+During my career transition at 45, Holger helped me see this wasn't a crisis—it was an opportunity. His emotional maturity framework gave me language for feelings I couldn't articulate.
+
+CATEGORY TAG:
+Life Transition
+
+--------------------------------------------------------------------------------
+PRICING
+--------------------------------------------------------------------------------
+
+SECTION LABEL (small orange):
+Investment
+
+SECTION TITLE:
+Flexible, Fair Pricing
+
+SECTION BODY:
+Pricing reflects your context—corporate, small business, or individual—ensuring coaching is accessible while valuing the depth of experience I bring.
+
+TIER 1 LABEL:
+Corporate
+
+TIER 1 AMOUNT (symbols on site):
+$$$
+
+TIER 2 LABEL:
+Small Business
+
+TIER 2 AMOUNT:
+$$
+
+TIER 3 LABEL:
+Individual/Church
+
+TIER 3 AMOUNT:
+$
+
+FOOTNOTE UNDER TIERS:
+Specific pricing discussed during Meet & Greet
+
+--------------------------------------------------------------------------------
+MEET & GREET (bottom section — the invitation text)
+--------------------------------------------------------------------------------
+
+SECTION TITLE:
+Request a Meet & Greet
+
+SECTION BODY:
+Let's see if we're a good fit. I'll review your submission and reach out within 48 hours. This isn't a sales pitch—it's a conversation about your story.
+
+
+================================================================================
+PART 2 — NAVIGATION, BUTTONS & SHORT LABELS (optional — skip if defaults are fine)
+================================================================================
+
+You don’t need to edit this block unless you want different menu names, button wording, or footer links.
+
+--- TOP MENU (header) ---
+
+NAV LINK 1:
+How I Help
+
+NAV LINK 2:
+About
+
+NAV LINK 3:
+Testimonials
+
+NAV LINK 4:
+Pricing
+
+HEADER BUTTON (top right):
+Get Started
+
+--- HERO BUTTONS & SMALL LINES ---
+
+HERO PRIMARY BUTTON:
+Schedule a Meet & Greet
+
+HERO SECONDARY BUTTON:
+Learn More
+
+HERO TRUST LINE 1 (with checkmark):
+Free Consultation
+
+HERO TRUST LINE 2 (with checkmark):
+StrengthsFinder Certified
+
+--- PROCESS (small tag on step 3 card) ---
+
+STEP 3 BADGE:
+Primary Format
+
+--- MEET & GREET SECTION (actions) ---
+
+MEET & GREET BUTTON:
+Start the Conversation
+
+MEET & GREET SMALL LINE UNDER BUTTON:
+No commitment required • Response within 48 hours
+
+--- FOOTER ---
+
+FOOTER — same BRAND NAME and TAGLINE as Part 1 (logo area).
+
+COPYRIGHT LINE (year is automatic on the site; optional wording tweak):
+© [YEAR] Holger Schein Coaching. All rights reserved.
+
+FOOTER LINK — PRIVACY:
+Privacy
+
+FOOTER LINK — TERMS:
+Terms
+
+FOOTER LINK — CONTACT (label only; email is set in code):
+Contact
+
+
+================================================================================
+DEVELOPER NOTES (not for Holger)
+================================================================================
+• Image alt text: hero “Person walking confidently through a city - living their best story”; about photo “Holger Schein - Life Coach & StrengthsFinder Specialist” — in landing.tsx on the <img> elements.
+• “Sign In” and sign-in dialog copy: client/src/components/demo-login-dialog.tsx.
+• Assets: /logo.png, /hero-inspiration.jpg, /holger.jpg.
